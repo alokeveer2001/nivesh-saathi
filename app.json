@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "nivesh-saathi",
+    "name": "Nivesh Saathi",
     "slug": "nivesh-saathi",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,21 +10,29 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#1A1F71"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.niveshsaathi.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#1A1F71"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "package": "com.niveshsaathi.app",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "129151a4-af2d-4822-9646-1619d443b231"
+      }
+    },
+    "owner": "antaryam22"
   }
 }
