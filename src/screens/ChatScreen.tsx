@@ -11,6 +11,7 @@ import ChatBubble from '../components/ChatBubble';
 import { ChatMessage } from '../types';
 import { getAIResponseAsync } from '../services/aiService';
 import { getApiKey } from '../services/apiKeyStore';
+import { loadExpenses, Expense } from '../services/expenseIntelligence';
 import { generateId } from '../utils/helpers';
 
 export default function ChatScreen() {
@@ -18,11 +19,12 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([
-    'SIP kaise start karun?',
-    'Tax kaise bachaye?',
-    'Emergency fund banao',
-    'Mera plan review karo',
+    'Mera portfolio review karo',
+    'Meri spending kaise hai?',
+    'Market kaisa hai aaj?',
+    'Kya invest karun abhi?',
   ]);
   const [hasApiKey, setHasApiKey] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
@@ -33,9 +35,10 @@ export default function ChatScreen() {
 
   useEffect(() => {
     checkApiKey();
+    loadExpenses().then(setExpenses);
     const welcomeMsg: ChatMessage = {
       id: generateId(),
-      text: `Hey ${user?.name || 'Dost'}! 👋\n\nMain hoon aapka Nivesh Saathi — aapka personal AI money advisor.\n\nKuch bhi pucho investing, saving, tax ya goals ke baare mein!`,
+      text: `Hey ${user?.name || 'Dost'}! 👋\n\nMain hoon aapka Nivesh Saathi — AI-powered money advisor.\n\nPortfolio, expenses, market, goals — kuch bhi pucho!`,
       isBot: true,
       timestamp: new Date(),
     };
@@ -69,7 +72,7 @@ export default function ChatScreen() {
     try {
       const response = await getAIResponseAsync(trimmed, user, conversationRef.current, {
         investments, buckets, goals,
-      });
+      }, expenses);
 
       // Add bot response to history
       conversationRef.current.push({ role: 'assistant', content: response.text });

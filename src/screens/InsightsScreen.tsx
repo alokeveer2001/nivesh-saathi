@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Dimensions,
 } from 'react-native';
@@ -6,6 +6,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useUser } from '../context/UserContext';
 import { analyzePortfolio } from '../services/portfolioAnalyzer';
+import { loadExpenses, analyzeExpenses, Expense, ExpenseAnalysis, EXPENSE_CATEGORIES } from '../services/expenseIntelligence';
+import { getMarketData, MarketData } from '../services/marketIntelligence';
 import { formatFullCurrency } from '../utils/helpers';
 import { Insight, InsightSeverity, PortfolioAnalysis } from '../types';
 
@@ -20,11 +22,23 @@ const SEVERITY_CONFIG: Record<InsightSeverity, { bg: string; border: string; ico
 
 export default function InsightsScreen({ navigation }: any) {
   const { user, investments, buckets, goals } = useUser();
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [market, setMarket] = useState<MarketData | null>(null);
+
+  useEffect(() => {
+    loadExpenses().then(setExpenses);
+    getMarketData().then(setMarket).catch(() => {});
+  }, []);
 
   const analysis: PortfolioAnalysis | null = useMemo(() => {
     if (!user) return null;
     return analyzePortfolio(user, investments, buckets, goals);
   }, [user, investments, buckets, goals]);
+
+  const expenseAnalysis: ExpenseAnalysis | null = useMemo(() => {
+    if (!user) return null;
+    return analyzeExpenses(expenses, user, investments);
+  }, [expenses, user, investments]);
 
   if (!user || !analysis) return null;
 
@@ -216,6 +230,79 @@ export default function InsightsScreen({ navigation }: any) {
             ))
           )}
         </View>
+
+        {/* Expense Intelligence */}
+        {expenseAnalysis && expenses.length > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Expense Intelligence 💸</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+              <View>
+                <Text style={{ fontSize: 10, color: '#9CA3AF' }}>Spent This Month</Text>
+                <Text style={{ fontSize: 18, fontWeight: '800', color: '#1A1A2E' }}>₹{expenseAnalysis.totalThisMonth.toLocaleString('en-IN')}</Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={{ fontSize: 10, color: '#9CA3AF' }}>Budget Used</Text>
+                <Text style={{ fontSize: 18, fontWeight: '800', color: expenseAnalysis.budgetUsed > 80 ? '#EF4444' : '#1A1A2E' }}>{expenseAnalysis.budgetUsed}%</Text>
+              </View>
+            </View>
+            {expenseAnalysis.categoryBreakdown.slice(0, 4).map(c => {
+              const info = EXPENSE_CATEGORIES.find(cat => cat.key === c.category);
+              return (
+                <View key={c.category} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                  <Text style={{ fontSize: 14, width: 24 }}>{info?.emoji}</Text>
+                  <Text style={{ flex: 1, fontSize: 12, color: '#374151' }}>{info?.label}</Text>
+                  <View style={{ width: 80, height: 5, backgroundColor: '#F0F0F5', borderRadius: 3, overflow: 'hidden', marginRight: 8 }}>
+                    <View style={{ width: `${c.percent}%`, height: '100%', backgroundColor: '#3F51B5', borderRadius: 3 }} />
+                  </View>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#1A1A2E', width: 50, textAlign: 'right' }}>₹{c.amount.toLocaleString('en-IN')}</Text>
+                </View>
+              );
+            })}
+            {expenseAnalysis.warnings.filter(w => w.severity !== 'info').map(w => (
+              <View key={w.id} style={{ backgroundColor: w.severity === 'positive' ? '#F0FDF4' : '#FFFBEB', borderRadius: 8, padding: 8, marginTop: 6 }}>
+                <Text style={{ fontSize: 11, fontWeight: '600', color: w.severity === 'positive' ? '#16A34A' : '#92400E' }}>{w.title}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Market Signals */}
+        {market && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Market Signals 📡</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ fontSize: 10, color: '#9CA3AF' }}>Nifty 50</Text>
+                <Text style={{ fontSize: 16, fontWeight: '800', color: '#1A1A2E' }}>{market.nifty50.value.toLocaleString()}</Text>
+                <Text style={{ fontSize: 11, fontWeight: '600', color: market.nifty50.changePercent >= 0 ? '#10B981' : '#EF4444' }}>
+                  {market.nifty50.changePercent >= 0 ? '+' : ''}{market.nifty50.changePercent}%
+                </Text>
+              </View>
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ fontSize: 10, color: '#9CA3AF' }}>Sentiment</Text>
+                <Text style={{ fontSize: 22 }}>{market.marketSentiment === 'fear' ? '😰' : market.marketSentiment === 'greed' ? '🤑' : '😐'}</Text>
+                <Text style={{ fontSize: 10, color: '#6B7280', textTransform: 'capitalize' }}>{market.marketSentiment}</Text>
+              </View>
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ fontSize: 10, color: '#9CA3AF' }}>Real FD Return</Text>
+                <Text style={{ fontSize: 16, fontWeight: '800', color: (market.fdRate - market.inflation) > 0 ? '#10B981' : '#EF4444' }}>
+                  {(market.fdRate - market.inflation).toFixed(1)}%
+                </Text>
+                <Text style={{ fontSize: 10, color: '#9CA3AF' }}>after inflation</Text>
+              </View>
+            </View>
+            {market.sectorHighlights.map((s, i) => (
+              <View key={i} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 4 }}>
+                <Text style={{ fontSize: 14, marginRight: 8 }}>
+                  {s.trend === 'bullish' ? '📈' : s.trend === 'bearish' ? '📉' : '➡️'}
+                </Text>
+                <Text style={{ fontSize: 12, color: '#374151', flex: 1 }}>
+                  <Text style={{ fontWeight: '700' }}>{s.name}</Text>: {s.note}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Ask AI */}
         <TouchableOpacity

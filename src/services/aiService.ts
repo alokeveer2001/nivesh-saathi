@@ -1,13 +1,15 @@
 import { UserProfile, RiskLevel, Investment, MoneyBucket, Goal } from '../types';
 import { getApiKey } from './apiKeyStore';
 import { analyzePortfolio } from './portfolioAnalyzer';
+import { getMarketData, buildMarketContext } from './marketIntelligence';
+import { Expense, analyzeExpenses, buildExpenseContext } from './expenseIntelligence';
 
 interface AIResponse {
   text: string;
   suggestions?: string[];
 }
 
-const SYSTEM_PROMPT = (user: UserProfile | null, portfolioSummary?: string) => {
+const SYSTEM_PROMPT = (user: UserProfile | null, portfolioSummary?: string, marketContext?: string, expenseContext?: string) => {
   const name = user?.name || 'User';
   const income = user?.monthlyIncome || 0;
   const expense = user?.monthlyExpense || 0;
@@ -20,6 +22,9 @@ const SYSTEM_PROMPT = (user: UserProfile | null, portfolioSummary?: string) => {
     ? `\n\n${portfolioSummary}`
     : '\n\nNOTE: No investments recorded yet. Encourage user to start investing and record their first investment.';
 
+  const marketBlock = marketContext ? `\n\n${marketContext}` : '';
+  const expenseBlock = expenseContext ? `\n\n${expenseContext}` : '';
+
   return `You are "Nivesh Saathi" — an AI financial advisor for Indians. You speak in Hinglish (mix of Hindi and English) in a friendly, approachable tone.
 
 USER PROFILE:
@@ -30,7 +35,7 @@ USER PROFILE:
 - Monthly Investable: ₹${investable.toLocaleString('en-IN')}
 - Stated Risk Level: ${risk}
 - Primary Goal: ${goal}
-${portfolioBlock}
+${portfolioBlock}${marketBlock}${expenseBlock}
 
 RULES:
 1. Always speak in Hinglish (Hindi + English mix). Use simple language.
@@ -58,13 +63,15 @@ async function callOpenAI(
   user: UserProfile | null,
   conversationHistory: { role: string; content: string }[],
   portfolioSummary?: string,
+  marketContext?: string,
+  expenseContext?: string,
 ): Promise<AIResponse | null> {
   try {
     const apiKey = await getApiKey();
     if (!apiKey) return null;
 
     const messages = [
-      { role: 'system', content: SYSTEM_PROMPT(user, portfolioSummary) },
+      { role: 'system', content: SYSTEM_PROMPT(user, portfolioSummary, marketContext, expenseContext) },
       ...conversationHistory.slice(-6), // Last 6 messages for context
       { role: 'user', content: query },
     ];
@@ -335,6 +342,7 @@ export async function getAIResponseAsync(
   user: UserProfile | null,
   conversationHistory: { role: string; content: string }[] = [],
   portfolioContext?: { investments: Investment[]; buckets: MoneyBucket[]; goals: Goal[] },
+  expenses?: Expense[],
 ): Promise<AIResponse> {
   // Build portfolio summary from real data
   let portfolioSummary: string | undefined;
@@ -343,8 +351,22 @@ export async function getAIResponseAsync(
     portfolioSummary = analysis.summaryForAI;
   }
 
-  // Try OpenAI first with full portfolio context
-  const aiResponse = await callOpenAI(query, user, conversationHistory, portfolioSummary);
+  // Fetch live market data
+  let marketCtx: string | undefined;
+  try {
+    const market = await getMarketData();
+    marketCtx = buildMarketContext(market);
+  } catch {}
+
+  // Build expense context
+  let expenseCtx: string | undefined;
+  if (user && expenses && expenses.length > 0 && portfolioContext) {
+    const expAnalysis = analyzeExpenses(expenses, user, portfolioContext.investments);
+    expenseCtx = buildExpenseContext(expAnalysis, user);
+  }
+
+  // Try OpenAI first with full context
+  const aiResponse = await callOpenAI(query, user, conversationHistory, portfolioSummary, marketCtx, expenseCtx);
   if (aiResponse) return aiResponse;
 
   // Fallback to offline
