@@ -234,7 +234,12 @@ export default function InsightsScreen({ navigation }: any) {
                 styles={styles}
                 onAction={() => {
                   if (insight.actionRoute) {
-                    navigation.navigate(insight.actionRoute);
+                    const tabScreens = ['Home', 'Goals', 'AskAI', 'Companion', 'Profile'];
+                    if (tabScreens.includes(insight.actionRoute)) {
+                      navigation.navigate('MainTabs', { screen: insight.actionRoute });
+                    } else {
+                      navigation.navigate(insight.actionRoute);
+                    }
                   }
                 }}
               />
