@@ -14,6 +14,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import SIPCalculatorScreen from '../screens/SIPCalculatorScreen';
 import LearnScreen from '../screens/LearnScreen';
 import InsightsScreen from '../screens/InsightsScreen';
+import CompanionScreen from '../screens/CompanionScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -66,10 +67,10 @@ function MainTabs() {
         }}
       />
       <Tab.Screen
-        name="Insights"
-        component={InsightsScreen}
+        name="Companion"
+        component={CompanionScreen}
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🧠" label="Insights" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🤖" label="Jarvis" focused={focused} />,
         }}
       />
       <Tab.Screen
@@ -100,6 +101,11 @@ function AppStack() {
       <Stack.Screen
         name="Garden"
         component={GardenScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="Insights"
+        component={InsightsScreen}
         options={{ animation: 'slide_from_right' }}
       />
     </Stack.Navigator>

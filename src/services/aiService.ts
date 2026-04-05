@@ -1,8 +1,12 @@
-import { UserProfile, RiskLevel, Investment, MoneyBucket, Goal } from '../types';
+import { UserProfile, RiskLevel, Investment, MoneyBucket, Goal, Asset, Liability, InsurancePolicy, WatchlistItem, LifeEvent } from '../types';
 import { getApiKey } from './apiKeyStore';
 import { analyzePortfolio } from './portfolioAnalyzer';
 import { getMarketData, buildMarketContext } from './marketIntelligence';
 import { Expense, analyzeExpenses, buildExpenseContext } from './expenseIntelligence';
+import {
+  loadAssets, loadLiabilities, loadInsurance, loadWatchlist, loadLifeEvents,
+  calculateNetWorth, calculateTaxProfile, generateSignals, buildCompanionContext,
+} from './companionEngine';
 
 interface AIResponse {
   text: string;
@@ -352,9 +356,10 @@ export async function getAIResponseAsync(
   }
 
   // Fetch live market data
+  let market;
   let marketCtx: string | undefined;
   try {
-    const market = await getMarketData();
+    market = await getMarketData();
     marketCtx = buildMarketContext(market);
   } catch {}
 
@@ -365,8 +370,25 @@ export async function getAIResponseAsync(
     expenseCtx = buildExpenseContext(expAnalysis, user);
   }
 
+  // Build full companion context (assets, liabilities, insurance, watchlist, etc.)
+  let companionCtx: string | undefined;
+  if (user && market && portfolioContext) {
+    try {
+      const [assets, liabilities, insurancePolicies, watchlistItems, lifeEvts] = await Promise.all([
+        loadAssets(), loadLiabilities(), loadInsurance(), loadWatchlist(), loadLifeEvents(),
+      ]);
+      const nw = calculateNetWorth(assets, liabilities, portfolioContext.buckets);
+      const tax = calculateTaxProfile(user, assets, portfolioContext.investments);
+      const sigs = generateSignals(user, market, assets, liabilities, insurancePolicies, watchlistItems, portfolioContext.investments, portfolioContext.goals, portfolioContext.buckets);
+      companionCtx = buildCompanionContext(user, nw, assets, liabilities, insurancePolicies, watchlistItems, lifeEvts, tax, sigs, market);
+    } catch {}
+  }
+
+  // Merge all context: portfolio + market + expenses + companion
+  const fullPortfolio = [portfolioSummary, companionCtx].filter(Boolean).join('\n\n');
+
   // Try OpenAI first with full context
-  const aiResponse = await callOpenAI(query, user, conversationHistory, portfolioSummary, marketCtx, expenseCtx);
+  const aiResponse = await callOpenAI(query, user, conversationHistory, fullPortfolio || undefined, marketCtx, expenseCtx);
   if (aiResponse) return aiResponse;
 
   // Fallback to offline
