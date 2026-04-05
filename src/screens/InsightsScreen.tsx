@@ -224,6 +224,7 @@ export default function InsightsScreen({ navigation }: any) {
               <InsightCard
                 key={insight.id}
                 insight={insight}
+                styles={styles}
                 onAction={() => {
                   if (insight.actionRoute) {
                     navigation.navigate(insight.actionRoute);
@@ -329,7 +330,7 @@ export default function InsightsScreen({ navigation }: any) {
   );
 }
 
-function InsightCard({ insight, onAction }: { insight: Insight; onAction: () => void }) {
+function InsightCard({ insight, onAction, styles }: { insight: Insight; onAction: () => void; styles: any }) {
   const config = SEVERITY_CONFIG[insight.severity];
   return (
     <View style={[styles.insightCard, { backgroundColor: config.bg, borderColor: config.border }]}>
