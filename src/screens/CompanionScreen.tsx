@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform,
-  RefreshControl, Modal, TextInput, Dimensions,
+  RefreshControl, Modal, TextInput, Dimensions, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -12,9 +12,9 @@ import { analyzePortfolio } from '../services/portfolioAnalyzer';
 import { getMarketData, MarketData } from '../services/marketIntelligence';
 import { loadExpenses, analyzeExpenses, Expense, EXPENSE_CATEGORIES } from '../services/expenseIntelligence';
 import {
-  loadAssets, addAsset, loadLiabilities, addLiability, loadInsurance,
+  loadAssets, addAsset, removeAsset, updateAsset, loadLiabilities, addLiability, removeLiability, loadInsurance,
   loadWatchlist, addToWatchlist, removeFromWatchlist, loadLifeEvents,
-  addLifeEvent, loadSignals, generateSignals, generateDailyBrief,
+  addLifeEvent, removeLifeEvent, loadSignals, generateSignals, generateDailyBrief,
   calculateNetWorth, calculateTaxProfile, buildCompanionContext,
   saveSignals,
 } from '../services/companionEngine';
@@ -79,6 +79,9 @@ export default function CompanionScreen({ navigation }: any) {
   const [watchName, setWatchName] = useState('');
   const [watchBuyTarget, setWatchBuyTarget] = useState('');
 
+  // Edit asset
+  const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
+
   const loadAll = useCallback(async (forceRefresh: boolean = false) => {
     // Clear market cache on force refresh to get latest data
     if (forceRefresh) {
@@ -123,15 +126,55 @@ export default function CompanionScreen({ navigation }: any) {
     const inv = parseFloat(assetInvested) || 0;
     const cur = parseFloat(assetCurrent) || inv;
     if (!assetName || inv <= 0) return;
-    await addAsset({
-      name: assetName, type: assetType, investedAmount: inv, currentValue: cur,
-      returns: cur - inv, returnPercent: inv > 0 ? ((cur - inv) / inv) * 100 : 0,
-      purchaseDate: new Date().toISOString(), notes: '',
-      riskLevel: ['fd', 'ppf', 'epf'].includes(assetType) ? 'safe' : ['stock', 'crypto'].includes(assetType) ? 'aggressive' : 'balanced',
-      bucket: ['fd', 'ppf', 'epf', 'bonds'].includes(assetType) ? 'safe' : ['stock', 'crypto'].includes(assetType) ? 'opportunity' : 'growth',
-    });
+    if (editingAssetId) {
+      await updateAsset(editingAssetId, {
+        name: assetName, type: assetType, investedAmount: inv, currentValue: cur,
+        returns: cur - inv, returnPercent: inv > 0 ? ((cur - inv) / inv) * 100 : 0,
+        riskLevel: ['fd', 'ppf', 'epf'].includes(assetType) ? 'safe' : ['stock', 'crypto'].includes(assetType) ? 'aggressive' : 'balanced',
+        bucket: ['fd', 'ppf', 'epf', 'bonds'].includes(assetType) ? 'safe' : ['stock', 'crypto'].includes(assetType) ? 'opportunity' : 'growth',
+      });
+      setEditingAssetId(null);
+    } else {
+      await addAsset({
+        name: assetName, type: assetType, investedAmount: inv, currentValue: cur,
+        returns: cur - inv, returnPercent: inv > 0 ? ((cur - inv) / inv) * 100 : 0,
+        purchaseDate: new Date().toISOString(), notes: '',
+        riskLevel: ['fd', 'ppf', 'epf'].includes(assetType) ? 'safe' : ['stock', 'crypto'].includes(assetType) ? 'aggressive' : 'balanced',
+        bucket: ['fd', 'ppf', 'epf', 'bonds'].includes(assetType) ? 'safe' : ['stock', 'crypto'].includes(assetType) ? 'opportunity' : 'growth',
+      });
+    }
     setShowAddAsset(false); setAssetName(''); setAssetInvested(''); setAssetCurrent('');
     loadAll();
+  };
+
+  const handleEditAsset = (a: Asset) => {
+    setEditingAssetId(a.id);
+    setAssetName(a.name);
+    setAssetType(a.type);
+    setAssetInvested(a.investedAmount.toString());
+    setAssetCurrent(a.currentValue.toString());
+    setShowAddAsset(true);
+  };
+
+  const handleDeleteAsset = (a: Asset) => {
+    Alert.alert('Delete Asset', `Delete "${a.name}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => { await removeAsset(a.id); loadAll(); } },
+    ]);
+  };
+
+  const handleDeleteLiability = (id: string) => {
+    Alert.alert('Delete Liability', 'Are you sure?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => { await removeLiability(id); loadAll(); } },
+    ]);
+  };
+
+  const handleDeleteLifeEvent = (id: string) => {
+    Alert.alert('Delete Event', 'Are you sure?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => { await removeLifeEvent(id); loadAll(); } },
+    ]);
   };
 
   const handleAddWatch = async () => {
@@ -445,7 +488,7 @@ export default function CompanionScreen({ navigation }: any) {
         {/* ═══ ASSETS ═══ */}
         {activeTab === 'assets' && (
           <>
-            <TouchableOpacity style={s.addBtn} onPress={() => setShowAddAsset(true)}>
+            <TouchableOpacity style={s.addBtn} onPress={() => { setEditingAssetId(null); setAssetName(''); setAssetInvested(''); setAssetCurrent(''); setShowAddAsset(true); }}>
               <Text style={s.addBtnText}>+ Add Asset</Text>
             </TouchableOpacity>
 
@@ -478,6 +521,14 @@ export default function CompanionScreen({ navigation }: any) {
                       <Text style={[s.assetPnl, { color: isPositive ? C.success : C.error }]}>
                         P&L: {isPositive ? '+' : ''}{formatFullCurrency(a.returns)}
                       </Text>
+                    </View>
+                    <View style={s.assetActions}>
+                      <TouchableOpacity style={s.assetActBtn} onPress={() => handleEditAsset(a)}>
+                        <Text style={s.assetActText}>✏️ Edit</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[s.assetActBtn, s.assetDelBtn]} onPress={() => handleDeleteAsset(a)}>
+                        <Text style={[s.assetActText, s.assetDelText]}>🗑️ Delete</Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
                 );
@@ -545,7 +596,7 @@ export default function CompanionScreen({ navigation }: any) {
           <View style={s.modalSheet}>
             <View style={s.handle} />
             <ScrollView showsVerticalScrollIndicator={false} bounces={false} keyboardShouldPersistTaps="handled">
-              <Text style={s.modalTitle}>Add Asset 💼</Text>
+              <Text style={s.modalTitle}>{editingAssetId ? 'Edit Asset ✏️' : 'Add Asset 💼'}</Text>
 
               <Text style={s.fLabel}>NAME</Text>
               <TextInput style={s.fInput} placeholder="HDFC Flexicap Fund" placeholderTextColor="#555" value={assetName} onChangeText={setAssetName} />
@@ -568,9 +619,9 @@ export default function CompanionScreen({ navigation }: any) {
               <TextInput style={s.fInput} placeholder="55000" placeholderTextColor="#555" value={assetCurrent} onChangeText={setAssetCurrent} keyboardType="numeric" />
 
               <View style={s.btnRow}>
-                <TouchableOpacity style={s.btnSec} onPress={() => setShowAddAsset(false)}><Text style={s.btnSecTxt}>Cancel</Text></TouchableOpacity>
+                <TouchableOpacity style={s.btnSec} onPress={() => { setShowAddAsset(false); setEditingAssetId(null); }}><Text style={s.btnSecTxt}>Cancel</Text></TouchableOpacity>
                 <TouchableOpacity style={s.btnPri} onPress={handleAddAsset}>
-                  <LinearGradient colors={['#6C63FF', '#4F46E5']} style={s.btnGrad}><Text style={s.btnPriTxt}>Add Asset</Text></LinearGradient>
+                  <LinearGradient colors={['#6C63FF', '#4F46E5']} style={s.btnGrad}><Text style={s.btnPriTxt}>{editingAssetId ? 'Update Asset' : 'Add Asset'}</Text></LinearGradient>
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -685,6 +736,11 @@ function createStyles(C: any) {
   assetFooter: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: C.border },
   assetInv: { fontSize: 11, color: C.textMuted },
   assetPnl: { fontSize: 11, fontWeight: '700' },
+  assetActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: C.border },
+  assetActBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, backgroundColor: C.input, borderWidth: 1, borderColor: C.border },
+  assetDelBtn: { borderColor: 'rgba(248,113,113,0.3)', backgroundColor: 'rgba(248,113,113,0.08)' },
+  assetActText: { fontSize: 11, fontWeight: '600', color: C.textSec },
+  assetDelText: { color: '#F87171' },
 
   // Watchlist
   watchCard: { backgroundColor: C.surface, borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: C.border, flexDirection: 'row', alignItems: 'center' },

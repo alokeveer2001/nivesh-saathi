@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Dimensions, RefreshControl, Platform, Modal, TextInput,
-  KeyboardAvoidingView,
+  KeyboardAvoidingView, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -15,14 +15,14 @@ import { getDailyNudge } from '../services/aiService';
 import { analyzePortfolio } from '../services/portfolioAnalyzer';
 import { getMarketData, getInvestmentVerdict, MarketData, InvestmentVerdict } from '../services/marketIntelligence';
 import {
-  loadExpenses, saveExpense, analyzeExpenses, Expense, ExpenseAnalysis,
+  loadExpenses, saveExpense, deleteExpense, analyzeExpenses, Expense, ExpenseAnalysis,
   EXPENSE_CATEGORIES, ExpenseCategory,
 } from '../services/expenseIntelligence';
 
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen({ navigation }: any) {
-  const { user, buckets, goals, investableAmount, investments, recordInvestment, totalInvested } = useUser();
+  const { user, buckets, goals, investableAmount, investments, recordInvestment, updateInvestment, deleteInvestment, totalInvested } = useUser();
   const { C, isDark } = useTheme();
   const s = useMemo(() => createStyles(C), [C]);
   const [refreshing, setRefreshing] = useState(false);
@@ -43,6 +43,10 @@ export default function HomeScreen({ navigation }: any) {
   const [expenseAmount, setExpenseAmount] = useState('');
   const [expenseCategory, setExpenseCategory] = useState<ExpenseCategory>('food');
   const [expenseNote, setExpenseNote] = useState('');
+
+  // Edit states
+  const [editingInvestmentId, setEditingInvestmentId] = useState<string | null>(null);
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
 
   useEffect(() => {
     setNudge(getDailyNudge(user));
@@ -73,24 +77,70 @@ export default function HomeScreen({ navigation }: any) {
   const handleRecordInvestment = async () => {
     const amt = parseAmount(investAmount);
     if (amt <= 0) return;
-    recordInvestment(amt, investBucket, investGoalId, investNote);
-    setShowInvestModal(false);
-    if (market && user) {
-      const eGoal = goals.find(g => g.type === 'emergency');
-      const ePct = eGoal ? Math.round((eGoal.currentAmount / eGoal.targetAmount) * 100) : 0;
-      const bTotal = buckets.find(b => b.id === investBucket)?.currentAmount || 0;
-      const v = getInvestmentVerdict(amt, investBucket, market, user.riskLevel, bTotal, totalInvested, ePct);
-      setVerdict(v); setShowVerdict(true);
+    if (editingInvestmentId) {
+      await updateInvestment(editingInvestmentId, { amount: amt, bucket: investBucket, goalId: investGoalId, note: investNote });
+      setEditingInvestmentId(null);
+      setShowInvestModal(false);
+    } else {
+      recordInvestment(amt, investBucket, investGoalId, investNote);
+      setShowInvestModal(false);
+      if (market && user) {
+        const eGoal = goals.find(g => g.type === 'emergency');
+        const ePct = eGoal ? Math.round((eGoal.currentAmount / eGoal.targetAmount) * 100) : 0;
+        const bTotal = buckets.find(b => b.id === investBucket)?.currentAmount || 0;
+        const v = getInvestmentVerdict(amt, investBucket, market, user.riskLevel, bTotal, totalInvested, ePct);
+        setVerdict(v); setShowVerdict(true);
+      }
     }
     setInvestAmount(''); setInvestNote('');
+  };
+
+  const handleEditInvestment = (inv: typeof investments[0]) => {
+    setEditingInvestmentId(inv.id);
+    setInvestBucket(inv.bucket);
+    setInvestAmount(inv.amount.toString());
+    setInvestNote(inv.note);
+    setInvestGoalId(inv.goalId);
+    setShowInvestModal(true);
+  };
+
+  const handleDeleteInvestment = (inv: typeof investments[0]) => {
+    Alert.alert('Delete Investment', `Delete ₹${inv.amount.toLocaleString('en-IN')} investment?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteInvestment(inv.id) },
+    ]);
   };
 
   const handleRecordExpense = async () => {
     const amt = parseAmount(expenseAmount);
     if (amt <= 0) return;
-    await saveExpense({ amount: amt, category: expenseCategory, note: expenseNote, date: new Date().toISOString() });
+    if (editingExpenseId) {
+      const { updateExpense } = await import('../services/expenseIntelligence');
+      await updateExpense(editingExpenseId, { amount: amt, category: expenseCategory, note: expenseNote });
+      setEditingExpenseId(null);
+    } else {
+      await saveExpense({ amount: amt, category: expenseCategory, note: expenseNote, date: new Date().toISOString() });
+    }
     setShowExpenseModal(false); setExpenseAmount(''); setExpenseNote('');
     loadExpenses().then(setExpenses);
+  };
+
+  const handleDeleteExpense = (exp: Expense) => {
+    Alert.alert('Delete Expense', `Delete ₹${exp.amount.toLocaleString('en-IN')} expense?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        await deleteExpense(exp.id);
+        loadExpenses().then(setExpenses);
+      }},
+    ]);
+  };
+
+  const handleEditExpense = (exp: Expense) => {
+    setEditingExpenseId(exp.id);
+    setExpenseAmount(exp.amount.toString());
+    setExpenseCategory(exp.category);
+    setExpenseNote(exp.note);
+    setShowExpenseModal(true);
   };
 
   const bucketGoals = goals.filter(g => g.bucket === investBucket);
@@ -178,7 +228,7 @@ export default function HomeScreen({ navigation }: any) {
               <Text style={s.nudgeLabel}>AI INSIGHT</Text>
             </View>
             <Text style={s.nudgeText}>{nudge}</Text>
-            <Text style={s.nudgeAction}>Chat with Saathi →</Text>
+            <Text style={s.nudgeAction}>Ask AI →</Text>
           </TouchableOpacity>
 
           {/* ── Quick Actions ── */}
@@ -215,6 +265,26 @@ export default function HomeScreen({ navigation }: any) {
                 </View>
                 <Text style={[s.budgetPct, { color: expAnalysis.budgetUsed > 80 ? C.error : C.textMuted }]}>{expAnalysis.budgetUsed}%</Text>
               </View>
+              {expenses.slice(0, 3).map(exp => {
+                const catInfo = EXPENSE_CATEGORIES.find(c => c.key === exp.category);
+                const d = new Date(exp.date);
+                return (
+                  <View key={exp.id} style={[s.actItem, { marginTop: 6 }]}>
+                    <Text style={{ fontSize: 16 }}>{catInfo?.emoji || '📦'}</Text>
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <Text style={s.actNote}>{exp.note || catInfo?.label || exp.category}</Text>
+                      <Text style={s.actDate}>{d.getDate()}/{d.getMonth() + 1}</Text>
+                    </View>
+                    <Text style={[s.actAmt, { color: C.error }]}>-₹{exp.amount.toLocaleString('en-IN')}</Text>
+                    <TouchableOpacity onPress={() => handleEditExpense(exp)} style={s.actAction}>
+                      <Text style={{ fontSize: 14 }}>✏️</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleDeleteExpense(exp)} style={s.actAction}>
+                      <Text style={{ fontSize: 14 }}>🗑️</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
             </View>
           )}
 
@@ -258,6 +328,12 @@ export default function HomeScreen({ navigation }: any) {
                       <Text style={s.actDate}>{d.getDate()}/{d.getMonth() + 1}</Text>
                     </View>
                     <Text style={s.actAmt}>+₹{inv.amount.toLocaleString('en-IN')}</Text>
+                    <TouchableOpacity onPress={() => handleEditInvestment(inv)} style={s.actAction}>
+                      <Text style={{ fontSize: 14 }}>✏️</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleDeleteInvestment(inv)} style={s.actAction}>
+                      <Text style={{ fontSize: 14 }}>🗑️</Text>
+                    </TouchableOpacity>
                   </View>
                 );
               })}
@@ -284,7 +360,7 @@ export default function HomeScreen({ navigation }: any) {
             <TouchableOpacity activeOpacity={1} style={s.modalSheet}>
               <View style={s.handle} />
               <ScrollView showsVerticalScrollIndicator={false} bounces={false} keyboardShouldPersistTaps="handled">
-                <Text style={s.modalTitle}>Record Investment</Text>
+                <Text style={s.modalTitle}>{editingInvestmentId ? 'Edit Investment' : 'Record Investment'}</Text>
                 <Text style={s.modalSub}>
                   {investBucket === 'safe' ? '🟢 Safe' : investBucket === 'growth' ? '🟡 Growth' : '🔴 Opportunity'} Pocket
                 </Text>
@@ -314,12 +390,12 @@ export default function HomeScreen({ navigation }: any) {
                 <TextInput style={s.input} placeholder="Monthly SIP" placeholderTextColor="#555" value={investNote} onChangeText={setInvestNote} />
 
                 <View style={s.btnRow}>
-                  <TouchableOpacity style={s.btnSec} onPress={() => setShowInvestModal(false)}>
+                  <TouchableOpacity style={s.btnSec} onPress={() => { setShowInvestModal(false); setEditingInvestmentId(null); }}>
                     <Text style={s.btnSecTxt}>Cancel</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={s.btnPri} onPress={handleRecordInvestment}>
                     <LinearGradient colors={['#6C63FF', '#4F46E5']} style={s.btnGrad}>
-                      <Text style={s.btnPriTxt}>Record ✅</Text>
+                      <Text style={s.btnPriTxt}>{editingInvestmentId ? 'Update ✅' : 'Record ✅'}</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 </View>
@@ -365,7 +441,7 @@ export default function HomeScreen({ navigation }: any) {
             <TouchableOpacity activeOpacity={1} style={s.modalSheet}>
               <View style={s.handle} />
               <ScrollView showsVerticalScrollIndicator={false} bounces={false} keyboardShouldPersistTaps="handled">
-                <Text style={s.modalTitle}>Track Expense 💸</Text>
+                <Text style={s.modalTitle}>{editingExpenseId ? 'Edit Expense 💸' : 'Track Expense 💸'}</Text>
 
                 <Text style={s.fieldLabel}>AMOUNT (₹)</Text>
                 <TextInput style={s.input} placeholder="500" placeholderTextColor="#555" value={expenseAmount} onChangeText={setExpenseAmount} keyboardType="numeric" autoFocus />
@@ -385,12 +461,12 @@ export default function HomeScreen({ navigation }: any) {
                 <TextInput style={s.input} placeholder="Zomato order" placeholderTextColor="#555" value={expenseNote} onChangeText={setExpenseNote} />
 
                 <View style={s.btnRow}>
-                  <TouchableOpacity style={s.btnSec} onPress={() => setShowExpenseModal(false)}>
+                  <TouchableOpacity style={s.btnSec} onPress={() => { setShowExpenseModal(false); setEditingExpenseId(null); }}>
                     <Text style={s.btnSecTxt}>Cancel</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={s.btnPri} onPress={handleRecordExpense}>
                     <LinearGradient colors={[C.error, '#DC2626']} style={s.btnGrad}>
-                      <Text style={s.btnPriTxt}>Record Expense</Text>
+                      <Text style={s.btnPriTxt}>{editingExpenseId ? 'Update Expense' : 'Record Expense'}</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 </View>
@@ -476,6 +552,7 @@ function createStyles(C: any) {
   actNote: { fontSize: 13, fontWeight: '600', color: C.text },
   actDate: { fontSize: 10, color: C.textMuted, marginTop: 1 },
   actAmt: { fontSize: 14, fontWeight: '700', color: C.success },
+  actAction: { marginLeft: 8, padding: 4 },
 
   // Modals
   modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },

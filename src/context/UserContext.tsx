@@ -13,10 +13,14 @@ interface UserContextType {
   goals: Goal[];
   setGoals: (goals: Goal[]) => void;
   addGoal: (goal: Goal) => void;
+  updateGoal: (id: string, updates: Partial<Omit<Goal, 'id'>>) => void;
+  deleteGoal: (id: string) => void;
   garden: GardenPlant[];
   setGarden: (garden: GardenPlant[]) => void;
   investments: Investment[];
   recordInvestment: (amount: number, bucketId: 'safe' | 'growth' | 'opportunity', goalId?: string, note?: string) => void;
+  updateInvestment: (id: string, updates: Partial<Omit<Investment, 'id'>>) => void;
+  deleteInvestment: (id: string) => void;
   totalInvested: number;
   investableAmount: number;
   isLoading: boolean;
@@ -224,6 +228,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
     await persistGoals(updated);
   };
 
+  const updateGoal = async (id: string, updates: Partial<Omit<Goal, 'id'>>) => {
+    const updated = goals.map(g => g.id === id ? { ...g, ...updates } : g);
+    await persistGoals(updated);
+  };
+
+  const deleteGoal = async (id: string) => {
+    const updated = goals.filter(g => g.id !== id);
+    await persistGoals(updated);
+  };
+
   // ═══════════════════════════════════════
   // Investment Recording
   // ═══════════════════════════════════════
@@ -263,6 +277,69 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateInvestment = async (id: string, updates: Partial<Omit<Investment, 'id'>>) => {
+    const old = investments.find(i => i.id === id);
+    if (!old) return;
+    const amountDiff = (updates.amount ?? old.amount) - old.amount;
+    const newBucket = updates.bucket ?? old.bucket;
+    const newGoalId = updates.goalId !== undefined ? updates.goalId : old.goalId;
+
+    const updatedInvestments = investments.map(i => i.id === id ? { ...i, ...updates } : i);
+    await persistInvestments(updatedInvestments);
+
+    // Adjust bucket amounts
+    let updatedBuckets = [...buckets];
+    if (old.bucket !== newBucket) {
+      updatedBuckets = updatedBuckets.map(b => {
+        if (b.id === old.bucket) return { ...b, currentAmount: Math.max(0, b.currentAmount - old.amount) };
+        if (b.id === newBucket) return { ...b, currentAmount: b.currentAmount + (updates.amount ?? old.amount) };
+        return b;
+      });
+    } else if (amountDiff !== 0) {
+      updatedBuckets = updatedBuckets.map(b =>
+        b.id === old.bucket ? { ...b, currentAmount: Math.max(0, b.currentAmount + amountDiff) } : b
+      );
+    }
+    await persistBuckets(updatedBuckets);
+
+    // Adjust goal amounts
+    let updatedGoals = [...goals];
+    if (old.goalId && old.goalId !== newGoalId) {
+      updatedGoals = updatedGoals.map(g =>
+        g.id === old.goalId ? { ...g, currentAmount: Math.max(0, g.currentAmount - old.amount) } : g
+      );
+    }
+    if (newGoalId && (old.goalId !== newGoalId || amountDiff !== 0)) {
+      const addAmt = old.goalId === newGoalId ? amountDiff : (updates.amount ?? old.amount);
+      updatedGoals = updatedGoals.map(g =>
+        g.id === newGoalId ? { ...g, currentAmount: Math.max(0, g.currentAmount + addAmt) } : g
+      );
+    }
+    await persistGoals(updatedGoals);
+  };
+
+  const deleteInvestment = async (id: string) => {
+    const inv = investments.find(i => i.id === id);
+    if (!inv) return;
+
+    const updatedInvestments = investments.filter(i => i.id !== id);
+    await persistInvestments(updatedInvestments);
+
+    // Reverse bucket amount
+    const updatedBuckets = buckets.map(b =>
+      b.id === inv.bucket ? { ...b, currentAmount: Math.max(0, b.currentAmount - inv.amount) } : b
+    );
+    await persistBuckets(updatedBuckets);
+
+    // Reverse goal amount
+    if (inv.goalId) {
+      const updatedGoals = goals.map(g =>
+        g.id === inv.goalId ? { ...g, currentAmount: Math.max(0, g.currentAmount - inv.amount) } : g
+      );
+      await persistGoals(updatedGoals);
+    }
+  };
+
   const setBuckets = async (b: MoneyBucket[]) => {
     await persistBuckets(b);
   };
@@ -291,10 +368,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
         goals,
         setGoals,
         addGoal,
+        updateGoal,
+        deleteGoal,
         garden,
         setGarden,
         investments,
         recordInvestment,
+        updateInvestment,
+        deleteInvestment,
         totalInvested,
         investableAmount,
         isLoading,

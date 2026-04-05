@@ -52,8 +52,15 @@ export default function InsightsScreen({ navigation }: any) {
       <StatusBar style={isDark ? 'light' : 'dark'} />
 
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>AI Insights 🧠</Text>
-        <Text style={styles.headerSub}>Data-driven portfolio intelligence</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Text style={styles.backArrow}>‹</Text>
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.headerTitle}>AI Insights 🧠</Text>
+            <Text style={styles.headerSub}>Data-driven portfolio intelligence</Text>
+          </View>
+        </View>
       </View>
 
       <ScrollView
@@ -311,13 +318,13 @@ export default function InsightsScreen({ navigation }: any) {
         {/* Ask AI */}
         <TouchableOpacity
           style={styles.askAI}
-          onPress={() => navigation.navigate('AskAI')}
+          onPress={() => navigation.navigate('MainTabs', { screen: 'AskAI' })}
           activeOpacity={0.85}
         >
           <LinearGradient colors={['#6C63FF', '#4F46E5']} style={styles.askAIGradient}>
             <Text style={styles.askAIEmoji}>✨</Text>
             <View style={{ flex: 1 }}>
-              <Text style={styles.askAITitle}>Ask Saathi AI</Text>
+              <Text style={styles.askAITitle}>Ask AI</Text>
               <Text style={styles.askAISub}>Get personalized advice based on your data</Text>
             </View>
             <Text style={styles.askAIArrow}>→</Text>
@@ -357,7 +364,9 @@ function riskColor(risk: string) {
 function createStyles(C: any, isDark: boolean) {
   return StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
-  header: { paddingTop: Platform.OS === 'ios' ? 56 : 44, paddingBottom: 20, paddingHorizontal: 20, backgroundColor: C.bg },
+  header: { paddingTop: Platform.OS === 'ios' ? 56 : 44, paddingBottom: 16, paddingHorizontal: 20, backgroundColor: C.bg, borderBottomWidth: 1, borderBottomColor: C.border },
+  backBtn: { width: 40, height: 40, borderRadius: 14, backgroundColor: C.surface, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: C.border, marginRight: 14 },
+  backArrow: { fontSize: 28, fontWeight: '700', color: C.text, marginTop: -2 },
   headerTitle: { fontSize: 24, fontWeight: '800', color: C.text, letterSpacing: -0.5 },
   headerSub: { fontSize: 13, color: C.textMuted, marginTop: 4 },
   content: { padding: 18 },

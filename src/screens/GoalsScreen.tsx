@@ -22,13 +22,19 @@ const GOAL_PRESETS: { type: GoalType; label: string; emoji: string; defaultTarge
 ];
 
 export default function GoalsScreen() {
-  const { goals, addGoal } = useUser();
+  const { goals, addGoal, updateGoal, deleteGoal } = useUser();
   const { C, isDark } = useTheme();
   const styles = useMemo(() => createStyles(C, isDark), [C, isDark]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState<typeof GOAL_PRESETS[0] | null>(null);
   const [customAmount, setCustomAmount] = useState('');
   const [customName, setCustomName] = useState('');
+
+  // Edit state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editGoal, setEditGoal] = useState<Goal | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editAmount, setEditAmount] = useState('');
 
   const handleAddGoal = () => {
     if (!selectedPreset) return;
@@ -63,6 +69,35 @@ export default function GoalsScreen() {
   const totalGoalAmount = goals.reduce((sum, g) => sum + g.targetAmount, 0);
   const totalCurrentAmount = goals.reduce((sum, g) => sum + g.currentAmount, 0);
   const totalMonthlySIP = goals.reduce((sum, g) => sum + g.monthlySIP, 0);
+
+  const handleEditGoal = (goal: Goal) => {
+    setEditGoal(goal);
+    setEditName(goal.name);
+    setEditAmount(goal.targetAmount.toString());
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editGoal) return;
+    const newTarget = parseAmount(editAmount) || editGoal.targetAmount;
+    const remaining = Math.max(1, Math.round(
+      (new Date(editGoal.targetDate).getTime() - Date.now()) / (30 * 24 * 60 * 60 * 1000)
+    ));
+    updateGoal(editGoal.id, {
+      name: editName || editGoal.name,
+      targetAmount: newTarget,
+      monthlySIP: Math.round((newTarget - editGoal.currentAmount) / remaining),
+    });
+    setShowEditModal(false);
+    setEditGoal(null);
+  };
+
+  const handleDeleteGoal = (goal: Goal) => {
+    Alert.alert('Delete Goal', `Delete "${goal.name}"? This cannot be undone.`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteGoal(goal.id) },
+    ]);
+  };
 
   return (
     <View style={styles.container}>
@@ -106,7 +141,17 @@ export default function GoalsScreen() {
           </View>
         ) : (
           goals.map((goal) => (
-            <GoalCard key={goal.id} goal={goal} />
+            <View key={goal.id}>
+              <GoalCard goal={goal} />
+              <View style={styles.goalActions}>
+                <TouchableOpacity style={styles.goalActionBtn} onPress={() => handleEditGoal(goal)}>
+                  <Text style={styles.goalActionText}>✏️ Edit</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.goalActionBtn, styles.goalDeleteBtn]} onPress={() => handleDeleteGoal(goal)}>
+                  <Text style={[styles.goalActionText, styles.goalDeleteText]}>🗑️ Delete</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           ))
         )}
 
@@ -236,6 +281,58 @@ export default function GoalsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Edit Goal Modal */}
+      <Modal visible={showEditModal} animationType="slide" transparent onRequestClose={() => setShowEditModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Edit Goal ✏️</Text>
+            {editGoal && (
+              <View style={styles.customizeForm}>
+                <Text style={styles.selectedEmoji}>{editGoal.emoji}</Text>
+
+                <View style={styles.formField}>
+                  <Text style={styles.fieldLabel}>Goal Name</Text>
+                  <TextInput
+                    style={styles.fieldInput}
+                    placeholder={editGoal.name}
+                    placeholderTextColor={C.textMuted}
+                    value={editName}
+                    onChangeText={setEditName}
+                  />
+                </View>
+
+                <View style={styles.formField}>
+                  <Text style={styles.fieldLabel}>Target Amount</Text>
+                  <TextInput
+                    style={styles.fieldInput}
+                    placeholder={formatFullCurrency(editGoal.targetAmount)}
+                    placeholderTextColor={C.textMuted}
+                    value={editAmount}
+                    onChangeText={setEditAmount}
+                    keyboardType="numeric"
+                  />
+                </View>
+
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity style={styles.cancelButton} onPress={() => { setShowEditModal(false); setEditGoal(null); }}>
+                    <Text style={styles.cancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.confirmButton} onPress={handleSaveEdit}>
+                    <LinearGradient colors={['#6C63FF', '#4F46E5']} style={styles.confirmGradient}>
+                      <Text style={styles.confirmText}>Save ✅</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+            <TouchableOpacity style={styles.closeModal} onPress={() => { setShowEditModal(false); setEditGoal(null); }}>
+              <Text style={styles.closeText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -314,5 +411,10 @@ function createStyles(C: any, isDark: boolean) {
       backgroundColor: C.input, justifyContent: 'center', alignItems: 'center',
     },
     closeText: { fontSize: 16, color: C.textSec, fontWeight: '700' },
+    goalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: -8, marginBottom: 14 },
+    goalActionBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: C.input, borderWidth: 1, borderColor: C.border },
+    goalDeleteBtn: { borderColor: 'rgba(248,113,113,0.3)', backgroundColor: 'rgba(248,113,113,0.08)' },
+    goalActionText: { fontSize: 12, fontWeight: '600', color: C.textSec },
+    goalDeleteText: { color: '#F87171' },
   });
 }

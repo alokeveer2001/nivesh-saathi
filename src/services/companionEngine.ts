@@ -51,6 +51,14 @@ export async function addAsset(asset: Omit<Asset, 'id' | 'lastUpdated'>): Promis
   await saveAssets([newAsset, ...assets]);
   return newAsset;
 }
+export async function updateAsset(id: string, updates: Partial<Omit<Asset, 'id'>>): Promise<void> {
+  const assets = await loadAssets();
+  await saveAssets(assets.map(a => a.id === id ? { ...a, ...updates, lastUpdated: new Date().toISOString() } : a));
+}
+export async function removeAsset(id: string): Promise<void> {
+  const assets = await loadAssets();
+  await saveAssets(assets.filter(a => a.id !== id));
+}
 
 // Liabilities
 export async function loadLiabilities(): Promise<Liability[]> { return loadJSON(LIABILITIES_KEY, []); }
@@ -61,6 +69,14 @@ export async function addLiability(l: Omit<Liability, 'id'>): Promise<Liability>
   await saveLiabilities([newL, ...all]);
   return newL;
 }
+export async function updateLiability(id: string, updates: Partial<Omit<Liability, 'id'>>): Promise<void> {
+  const all = await loadLiabilities();
+  await saveLiabilities(all.map(l => l.id === id ? { ...l, ...updates } : l));
+}
+export async function removeLiability(id: string): Promise<void> {
+  const all = await loadLiabilities();
+  await saveLiabilities(all.filter(l => l.id !== id));
+}
 
 // Insurance
 export async function loadInsurance(): Promise<InsurancePolicy[]> { return loadJSON(INSURANCE_KEY, []); }
@@ -70,6 +86,14 @@ export async function addInsurance(p: Omit<InsurancePolicy, 'id'>): Promise<Insu
   const newP: InsurancePolicy = { ...p, id: generateId() };
   await saveInsurance([newP, ...all]);
   return newP;
+}
+export async function updateInsurance(id: string, updates: Partial<Omit<InsurancePolicy, 'id'>>): Promise<void> {
+  const all = await loadInsurance();
+  await saveInsurance(all.map(p => p.id === id ? { ...p, ...updates } : p));
+}
+export async function removeInsurance(id: string): Promise<void> {
+  const all = await loadInsurance();
+  await saveInsurance(all.filter(p => p.id !== id));
 }
 
 // Watchlist
@@ -85,6 +109,10 @@ export async function removeFromWatchlist(id: string) {
   const all = await loadWatchlist();
   await saveWatchlist(all.filter(i => i.id !== id));
 }
+export async function updateWatchlistItem(id: string, updates: Partial<Omit<WatchlistItem, 'id'>>): Promise<void> {
+  const all = await loadWatchlist();
+  await saveWatchlist(all.map(i => i.id === id ? { ...i, ...updates } : i));
+}
 
 // Life Events
 export async function loadLifeEvents(): Promise<LifeEvent[]> { return loadJSON(LIFE_EVENTS_KEY, []); }
@@ -94,6 +122,10 @@ export async function addLifeEvent(e: Omit<LifeEvent, 'id'>): Promise<LifeEvent>
   const newE: LifeEvent = { ...e, id: generateId() };
   await saveLifeEvents([newE, ...all]);
   return newE;
+}
+export async function removeLifeEvent(id: string): Promise<void> {
+  const all = await loadLifeEvents();
+  await saveLifeEvents(all.filter(e => e.id !== id));
 }
 
 // Signals

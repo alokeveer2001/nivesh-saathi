@@ -82,6 +82,17 @@ export async function saveExpense(expense: Omit<Expense, 'id'>): Promise<Expense
   return newExpense;
 }
 
+export async function updateExpense(id: string, updates: Partial<Omit<Expense, 'id'>>): Promise<void> {
+  const expenses = await loadExpenses();
+  const updated = expenses.map(e => e.id === id ? { ...e, ...updates } : e);
+  await AsyncStorage.setItem(EXPENSES_KEY, JSON.stringify(updated));
+}
+
+export async function deleteExpense(id: string): Promise<void> {
+  const expenses = await loadExpenses();
+  await AsyncStorage.setItem(EXPENSES_KEY, JSON.stringify(expenses.filter(e => e.id !== id)));
+}
+
 export async function clearExpenses(): Promise<void> {
   await AsyncStorage.removeItem(EXPENSES_KEY);
 }
