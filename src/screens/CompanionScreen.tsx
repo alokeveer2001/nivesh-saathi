@@ -21,6 +21,10 @@ import {
   Asset, Liability, InsurancePolicy, WatchlistItem, LifeEvent,
   AISignal, DailyBrief, NetWorth, TaxProfile, AssetClass,
 } from '../types';
+import {
+  generateAINotifications, loadNotifications, markNotifRead, markAllRead,
+  ProactiveNotification,
+} from '../services/notificationEngine';
 
 const { width } = Dimensions.get('window');
 const C = {
@@ -61,7 +65,8 @@ export default function CompanionScreen({ navigation }: any) {
   const [signals, setSignals] = useState<AISignal[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [brief, setBrief] = useState<DailyBrief | null>(null);
-  const [activeTab, setActiveTab] = useState<'brief' | 'signals' | 'wealth' | 'assets' | 'watchlist'>('brief');
+  const [notifications, setNotifications] = useState<ProactiveNotification[]>([]);
+  const [activeTab, setActiveTab] = useState<'feed' | 'brief' | 'signals' | 'wealth' | 'assets' | 'watchlist'>('feed');
 
   // Add asset modal
   const [showAddAsset, setShowAddAsset] = useState(false);
@@ -96,6 +101,10 @@ export default function CompanionScreen({ navigation }: any) {
       const nw = calculateNetWorth(a, l, buckets);
       const db = generateDailyBrief(user, m, nw, sigs, investments, goals);
       setBrief(db);
+
+      // Generate proactive AI notifications
+      const notifs = await generateAINotifications(user, m, investments, goals, buckets, a, sigs);
+      setNotifications(notifs);
     }
   }, [user, investments, goals, buckets]);
 
@@ -142,7 +151,9 @@ export default function CompanionScreen({ navigation }: any) {
   if (!user) return null;
 
   const unreadSignals = signals.filter(s => !s.read).length;
+  const unreadNotifs = notifications.filter(n => !n.read).length;
   const tabs = [
+    { key: 'feed', label: `Feed${unreadNotifs > 0 ? ` (${unreadNotifs})` : ''}`, emoji: '🔔' },
     { key: 'brief', label: 'Daily Brief', emoji: '📰' },
     { key: 'signals', label: `Signals${unreadSignals > 0 ? ` (${unreadSignals})` : ''}`, emoji: '🎯' },
     { key: 'wealth', label: 'Net Worth', emoji: '💎' },
@@ -182,6 +193,94 @@ export default function CompanionScreen({ navigation }: any) {
         contentContainerStyle={s.body}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.textMuted} />}
       >
+        {/* ═══ NOTIFICATION FEED ═══ */}
+        {activeTab === 'feed' && (
+          <>
+            {unreadNotifs > 0 && (
+              <TouchableOpacity style={s.markAllBtn} onPress={async () => { await markAllRead(); setNotifications(n => n.map(x => ({ ...x, read: true }))); }}>
+                <Text style={s.markAllText}>Mark all as read</Text>
+              </TouchableOpacity>
+            )}
+
+            {notifications.length === 0 ? (
+              <View style={s.emptyCard}>
+                <Text style={{ fontSize: 36 }}>🔔</Text>
+                <Text style={s.emptyText}>Your AI companion is analyzing...{'\n'}Pull down to refresh for signals</Text>
+              </View>
+            ) : (
+              <>
+                {/* Sector picks section */}
+                {notifications.filter(n => n.type === 'sector_pick').length > 0 && (
+                  <View style={s.feedSection}>
+                    <Text style={s.feedSectionTitle}>📊 Today's Sector Picks</Text>
+                    {notifications.filter(n => n.type === 'sector_pick').map(n => (
+                      <TouchableOpacity key={n.id} style={[s.feedCard, !n.read && s.feedCardUnread]} activeOpacity={0.8}
+                        onPress={async () => { await markNotifRead(n.id); setNotifications(ns => ns.map(x => x.id === n.id ? { ...x, read: true } : x)); }}>
+                        <View style={s.feedCardHeader}>
+                          <Text style={s.feedEmoji}>{n.emoji}</Text>
+                          <View style={{ flex: 1 }}>
+                            <Text style={s.feedTitle}>{n.title}</Text>
+                            <Text style={s.feedBody}>{n.body}</Text>
+                            {n.detail && <Text style={s.feedDetail}>{n.detail}</Text>}
+                          </View>
+                          {!n.read && <View style={s.unreadDot} />}
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
+                {/* AI Insight */}
+                {notifications.filter(n => n.type === 'ai_insight').map(n => (
+                  <View key={n.id} style={[s.feedCard, s.aiInsightCard]}>
+                    <Text style={s.feedTitle}>{n.title}</Text>
+                    <Text style={[s.feedBody, { marginTop: 4 }]}>{n.body}</Text>
+                  </View>
+                ))}
+
+                {/* Market alerts & SIP reminders */}
+                {notifications.filter(n => ['market_alert', 'sip_reminder', 'opportunity'].includes(n.type)).map(n => (
+                  <TouchableOpacity key={n.id} style={[s.feedCard, !n.read && s.feedCardUnread]} activeOpacity={0.8}
+                    onPress={async () => {
+                      await markNotifRead(n.id);
+                      setNotifications(ns => ns.map(x => x.id === n.id ? { ...x, read: true } : x));
+                      if (n.actionRoute) navigation.navigate(n.actionRoute);
+                    }}>
+                    <View style={s.feedCardHeader}>
+                      <Text style={s.feedEmoji}>{n.emoji}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.feedTitle}>{n.title}</Text>
+                        <Text style={s.feedBody}>{n.body}</Text>
+                      </View>
+                      {n.actionLabel && (
+                        <View style={s.feedAction}>
+                          <Text style={s.feedActionText}>{n.actionLabel}</Text>
+                        </View>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+
+                {/* Goal updates */}
+                {notifications.filter(n => n.type === 'goal_update').map(n => (
+                  <View key={n.id} style={[s.feedCard, { borderLeftWidth: 3, borderLeftColor: C.success }]}>
+                    <Text style={s.feedTitle}>{n.title}</Text>
+                    <Text style={s.feedBody}>{n.body}</Text>
+                  </View>
+                ))}
+
+                {/* Learning tip */}
+                {notifications.filter(n => n.type === 'learning').map(n => (
+                  <View key={n.id} style={[s.feedCard, { borderLeftWidth: 3, borderLeftColor: C.accent }]}>
+                    <Text style={s.feedTitle}>{n.title}</Text>
+                    <Text style={s.feedBody}>{n.body}</Text>
+                  </View>
+                ))}
+              </>
+            )}
+          </>
+        )}
+
         {/* ═══ DAILY BRIEF ═══ */}
         {activeTab === 'brief' && brief && (
           <>
@@ -597,6 +696,23 @@ const s = StyleSheet.create({
   // Empty
   emptyCard: { alignItems: 'center', paddingVertical: 40 },
   emptyText: { fontSize: 13, color: C.textMuted, textAlign: 'center', lineHeight: 19, marginTop: 8 },
+
+  // Feed
+  markAllBtn: { alignSelf: 'flex-end', marginBottom: 10, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border },
+  markAllText: { fontSize: 11, color: C.primary, fontWeight: '600' },
+  feedSection: { marginBottom: 12 },
+  feedSectionTitle: { fontSize: 14, fontWeight: '700', color: C.text, marginBottom: 8 },
+  feedCard: { backgroundColor: C.surface, borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: C.border },
+  feedCardUnread: { borderLeftWidth: 3, borderLeftColor: C.primary },
+  aiInsightCard: { borderLeftWidth: 3, borderLeftColor: '#6C63FF', backgroundColor: 'rgba(108,99,255,0.06)' },
+  feedCardHeader: { flexDirection: 'row', alignItems: 'flex-start' },
+  feedEmoji: { fontSize: 18, marginRight: 10, marginTop: 1 },
+  feedTitle: { fontSize: 13, fontWeight: '700', color: C.text, marginBottom: 2 },
+  feedBody: { fontSize: 12, color: C.textMuted, lineHeight: 17 },
+  feedDetail: { fontSize: 10, color: C.textMuted, marginTop: 4, fontStyle: 'italic' },
+  unreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: C.primary, marginLeft: 6, marginTop: 4 },
+  feedAction: { backgroundColor: C.primary, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, marginLeft: 8 },
+  feedActionText: { fontSize: 10, fontWeight: '700', color: '#FFF' },
 
   // Modals
   modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
