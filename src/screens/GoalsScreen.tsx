@@ -67,7 +67,7 @@ export default function GoalsScreen() {
 
       {/* Header */}
       <LinearGradient
-        colors={['#0F0F1E', '#1A1F71']}
+        colors={['#0B0B0F', '#111118']}
         style={styles.header}
       >
         <Text style={styles.headerTitle}>Mere Goals 🎯</Text>
@@ -114,7 +114,7 @@ export default function GoalsScreen() {
           activeOpacity={0.8}
         >
           <LinearGradient
-            colors={['#1A1F71', '#3F51B5']}
+            colors={['#6C63FF', '#4F46E5']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.addButtonGradient}
@@ -211,7 +211,7 @@ export default function GoalsScreen() {
                     onPress={handleAddGoal}
                   >
                     <LinearGradient
-                      colors={['#1A1F71', '#3F51B5']}
+                      colors={['#6C63FF', '#4F46E5']}
                       style={styles.confirmGradient}
                     >
                       <Text style={styles.confirmText}>Add Goal ✅</Text>
@@ -240,7 +240,7 @@ export default function GoalsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFBFF',
+    backgroundColor: '#0B0B0F',
   },
   header: {
     paddingTop: Platform.OS === 'ios' ? 56 : 44,

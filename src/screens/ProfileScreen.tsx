@@ -120,7 +120,7 @@ export default function ProfileScreen() {
     <View style={styles.container}>
       <StatusBar style="light" />
 
-      <LinearGradient colors={['#0F0F1E', '#1A1F71']} style={styles.header}>
+      <LinearGradient colors={['#0B0B0F', '#111118']} style={styles.header}>
         <View style={styles.avatarCircle}>
           <Text style={styles.avatarText}>{user.name.charAt(0).toUpperCase()}</Text>
         </View>
@@ -240,7 +240,7 @@ export default function ProfileScreen() {
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalSave} onPress={saveEdit}>
                 <LinearGradient
-                  colors={['#1A1F71', '#3F51B5']}
+                  colors={['#6C63FF', '#4F46E5']}
                   style={styles.modalSaveGradient}
                 >
                   <Text style={styles.modalSaveText}>Save</Text>
@@ -279,7 +279,7 @@ export default function ProfileScreen() {
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalSave} onPress={handleSaveApiKey}>
                 <LinearGradient
-                  colors={['#1A1F71', '#3F51B5']}
+                  colors={['#6C63FF', '#4F46E5']}
                   style={styles.modalSaveGradient}
                 >
                   <Text style={styles.modalSaveText}>Save</Text>
@@ -307,7 +307,7 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFBFF' },
+  container: { flex: 1, backgroundColor: '#0B0B0F' },
   header: {
     paddingTop: Platform.OS === 'ios' ? 56 : 44,
     paddingBottom: 28,
@@ -315,81 +315,82 @@ const styles = StyleSheet.create({
   },
   avatarCircle: {
     width: 64, height: 64, borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center',
-    marginBottom: 10, borderWidth: 2, borderColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: 'rgba(108,99,255,0.15)', justifyContent: 'center', alignItems: 'center',
+    marginBottom: 10, borderWidth: 2, borderColor: 'rgba(108,99,255,0.3)',
   },
-  avatarText: { fontSize: 28, fontWeight: '800', color: '#FFF' },
-  headerName: { fontSize: 22, fontWeight: '800', color: '#FFF', letterSpacing: -0.3 },
-  headerAge: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 4 },
+  avatarText: { fontSize: 28, fontWeight: '800', color: '#6C63FF' },
+  headerName: { fontSize: 22, fontWeight: '800', color: '#F0F0F5', letterSpacing: -0.3 },
+  headerAge: { fontSize: 13, color: '#6B7280', marginTop: 4 },
   contentContainer: { padding: 18 },
   card: {
-    backgroundColor: '#FFF', borderRadius: 16, padding: 18, marginBottom: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 2,
+    backgroundColor: '#111118', borderRadius: 16, padding: 18, marginBottom: 14,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
   },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: '#1A1A2E', marginBottom: 14 },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: '#F0F0F5', marginBottom: 14 },
   infoRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F0F0F5',
+    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)',
   },
   highlightRow: {
-    backgroundColor: '#F0FDF4', marginHorizontal: -18, paddingHorizontal: 18,
+    backgroundColor: 'rgba(52,211,153,0.08)', marginHorizontal: -18, paddingHorizontal: 18,
     borderBottomWidth: 0, borderRadius: 10, marginTop: 6,
   },
   infoLabel: { fontSize: 14, color: '#6B7280' },
-  infoValue: { fontSize: 14, fontWeight: '600', color: '#1A1A2E' },
+  infoValue: { fontSize: 14, fontWeight: '600', color: '#F0F0F5' },
   editRow: { flexDirection: 'row', alignItems: 'center' },
-  editIcon: { fontSize: 12, marginLeft: 8, opacity: 0.5 },
-  subTitle: { fontSize: 14, fontWeight: '700', color: '#1A1A2E', marginTop: 16, marginBottom: 10 },
+  editIcon: { fontSize: 12, marginLeft: 8, opacity: 0.4 },
+  subTitle: { fontSize: 14, fontWeight: '700', color: '#F0F0F5', marginTop: 16, marginBottom: 10 },
   riskRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
   riskChip: {
-    flex: 1, paddingVertical: 10, borderRadius: 12, backgroundColor: '#F5F5FA',
-    alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB',
+    flex: 1, paddingVertical: 10, borderRadius: 12, backgroundColor: '#1E1E28',
+    alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
   },
-  riskChipActive: { backgroundColor: '#1A1F71', borderColor: '#1A1F71' },
+  riskChipActive: { backgroundColor: '#6C63FF', borderColor: '#6C63FF' },
   riskText: { fontSize: 12, fontWeight: '600', color: '#6B7280' },
   riskTextActive: { color: '#FFF' },
   bucketRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8 },
   bucketDot: { width: 8, height: 8, borderRadius: 4, marginRight: 10 },
-  bucketName: { flex: 1, fontSize: 13, color: '#374151' },
+  bucketName: { flex: 1, fontSize: 13, color: '#9CA3AF' },
   bucketPercent: { fontSize: 13, fontWeight: '700', color: '#6B7280', marginRight: 12 },
-  bucketAmount: { fontSize: 13, fontWeight: '700', color: '#1A1A2E', width: 70, textAlign: 'right' },
+  bucketAmount: { fontSize: 13, fontWeight: '700', color: '#F0F0F5', width: 70, textAlign: 'right' },
   aiDesc: { fontSize: 13, color: '#6B7280', lineHeight: 19, marginBottom: 12 },
   apiButton: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F5FA',
-    borderRadius: 12, padding: 14,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#1E1E28',
+    borderRadius: 12, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
   },
-  statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#D1D5DB', marginRight: 10 },
-  statusDotActive: { backgroundColor: '#10B981' },
-  apiButtonText: { flex: 1, fontSize: 14, fontWeight: '600', color: '#374151' },
-  apiArrow: { fontSize: 16, color: '#9CA3AF' },
+  statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#333', marginRight: 10 },
+  statusDotActive: { backgroundColor: '#34D399' },
+  apiButtonText: { flex: 1, fontSize: 14, fontWeight: '600', color: '#9CA3AF' },
+  apiArrow: { fontSize: 16, color: '#6B7280' },
   aboutText: { fontSize: 13, color: '#6B7280', lineHeight: 20 },
-  version: { fontSize: 11, color: '#9CA3AF', marginTop: 10, textAlign: 'center' },
+  version: { fontSize: 11, color: '#555', marginTop: 10, textAlign: 'center' },
   resetButton: {
-    backgroundColor: '#FEF2F2', borderRadius: 12, paddingVertical: 14, alignItems: 'center',
-    borderWidth: 1, borderColor: '#FECACA',
+    backgroundColor: 'rgba(248,113,113,0.1)', borderRadius: 12, paddingVertical: 14, alignItems: 'center',
+    borderWidth: 1, borderColor: 'rgba(248,113,113,0.2)',
   },
-  resetText: { fontSize: 14, fontWeight: '600', color: '#DC2626' },
+  resetText: { fontSize: 14, fontWeight: '600', color: '#F87171' },
   modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center',
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center',
     paddingHorizontal: 30,
   },
   modalContent: {
-    backgroundColor: '#FFF', borderRadius: 20, padding: 24,
+    backgroundColor: '#18181F', borderRadius: 20, padding: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
   },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A2E', marginBottom: 6 },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: '#F0F0F5', marginBottom: 6 },
   modalDesc: { fontSize: 13, color: '#6B7280', lineHeight: 19, marginBottom: 14 },
   modalInput: {
-    backgroundColor: '#F5F5FA', borderRadius: 12, paddingHorizontal: 16,
+    backgroundColor: '#1E1E28', borderRadius: 12, paddingHorizontal: 16,
     paddingVertical: Platform.OS === 'ios' ? 14 : 12,
-    fontSize: 16, color: '#1A1A2E', marginTop: 8, marginBottom: 16,
+    fontSize: 16, color: '#F0F0F5', marginTop: 8, marginBottom: 16,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
   },
   modalButtons: { flexDirection: 'row', gap: 10 },
-  modalCancel: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 12, backgroundColor: '#F5F5FA' },
+  modalCancel: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 12, backgroundColor: '#1E1E28' },
   modalCancelText: { fontSize: 14, fontWeight: '600', color: '#6B7280' },
   modalSave: { flex: 2, borderRadius: 12, overflow: 'hidden' },
   modalSaveGradient: { paddingVertical: 12, alignItems: 'center', borderRadius: 12 },
   modalSaveText: { fontSize: 14, fontWeight: '700', color: '#FFF' },
   removeKeyBtn: { marginTop: 12, alignItems: 'center', paddingVertical: 8 },
-  removeKeyText: { fontSize: 13, color: '#DC2626', fontWeight: '600' },
+  removeKeyText: { fontSize: 13, color: '#F87171', fontWeight: '600' },
 });
 

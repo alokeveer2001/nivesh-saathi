@@ -33,16 +33,13 @@ function MainTabs() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopWidth: 0,
+          backgroundColor: '#111118',
+          borderTopWidth: 1,
+          borderTopColor: 'rgba(255,255,255,0.06)',
           height: Platform.OS === 'ios' ? 82 : 66,
           paddingBottom: Platform.OS === 'ios' ? 24 : 10,
           paddingTop: 8,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.05,
-          shadowRadius: 10,
-          elevation: 10,
+          elevation: 0,
         },
         tabBarShowLabel: false,
       }}
@@ -118,7 +115,7 @@ export default function AppNavigator() {
         <Text style={styles.loadingEmoji}>✨</Text>
         <Text style={styles.loadingTitle}>Nivesh Saathi</Text>
         <Text style={styles.loadingSubtitle}>AI-powered investing</Text>
-        <ActivityIndicator size="small" color="#1A1F71" style={{ marginTop: 20 }} />
+        <ActivityIndicator size="small" color="#6C63FF" style={{ marginTop: 20 }} />
       </View>
     );
   }
@@ -137,7 +134,7 @@ const styles = StyleSheet.create({
   },
   tabEmoji: {
     fontSize: 20,
-    opacity: 0.4,
+    opacity: 0.35,
   },
   tabEmojiActive: {
     opacity: 1,
@@ -145,19 +142,19 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     fontSize: 10,
-    color: '#9CA3AF',
+    color: '#6B7280',
     marginTop: 2,
     fontWeight: '500',
   },
   tabLabelActive: {
-    color: '#1A1F71',
+    color: '#6C63FF',
     fontWeight: '700',
   },
   loading: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FAFBFF',
+    backgroundColor: '#0B0B0F',
   },
   loadingEmoji: {
     fontSize: 48,
@@ -166,12 +163,12 @@ const styles = StyleSheet.create({
   loadingTitle: {
     fontSize: 26,
     fontWeight: '800',
-    color: '#1A1F71',
+    color: '#F0F0F5',
     letterSpacing: -0.5,
   },
   loadingSubtitle: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: '#6B7280',
     marginTop: 4,
   },
 });

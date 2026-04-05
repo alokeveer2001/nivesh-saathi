@@ -202,7 +202,7 @@ export default function OnboardingScreen() {
     <View style={styles.container}>
       <StatusBar style="light" />
       <LinearGradient
-        colors={['#0F0F1E', '#1A1F71']}
+        colors={['#0B0B0F', '#111118']}
         style={styles.header}
       >
         <Text style={styles.headerTitle}>🤝 Nivesh Saathi</Text>

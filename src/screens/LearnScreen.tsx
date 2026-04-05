@@ -78,7 +78,7 @@ export default function LearnScreen({ navigation }: any) {
     <View style={styles.container}>
       <StatusBar style="light" />
 
-      <LinearGradient colors={['#0F0F1E', '#1A1F71']} style={styles.header}>
+      <LinearGradient colors={['#0B0B0F', '#111118']} style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
@@ -124,9 +124,9 @@ export default function LearnScreen({ navigation }: any) {
                 <Text style={styles.lessonTime}>{lesson.readTime}</Text>
                 <View style={[
                   styles.diffBadge,
-                  lesson.difficulty === 'Beginner' && { backgroundColor: '#E8F5E9' },
-                  lesson.difficulty === 'Intermediate' && { backgroundColor: '#FFF3E0' },
-                  lesson.difficulty === 'Advanced' && { backgroundColor: '#FCE4EC' },
+                  lesson.difficulty === 'Beginner' && { backgroundColor: 'rgba(52,211,153,0.12)' },
+                  lesson.difficulty === 'Intermediate' && { backgroundColor: 'rgba(251,191,36,0.12)' },
+                  lesson.difficulty === 'Advanced' && { backgroundColor: 'rgba(244,114,182,0.12)' },
                 ]}>
                   <Text style={[
                     styles.diffText,
@@ -154,47 +154,47 @@ export default function LearnScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFBFF' },
+  container: { flex: 1, backgroundColor: '#0B0B0F' },
   header: {
     paddingTop: Platform.OS === 'ios' ? 56 : 44,
     paddingBottom: 20,
     paddingHorizontal: 20,
+    backgroundColor: '#0B0B0F',
   },
   backBtn: { marginBottom: 8 },
-  backText: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: '600' },
-  headerTitle: { fontSize: 24, fontWeight: '800', color: '#FFF', letterSpacing: -0.5 },
-  headerSub: { fontSize: 14, color: 'rgba(255,255,255,0.6)', marginTop: 4 },
+  backText: { color: '#6B7280', fontSize: 14, fontWeight: '600' },
+  headerTitle: { fontSize: 24, fontWeight: '800', color: '#F0F0F5', letterSpacing: -0.5 },
+  headerSub: { fontSize: 14, color: '#6B7280', marginTop: 4 },
   filterRow: {
     flexDirection: 'row', paddingHorizontal: 18, paddingVertical: 12, gap: 8,
   },
   filterChip: {
     paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
-    backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E5E7EB',
+    backgroundColor: '#111118', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
   },
-  filterActive: { backgroundColor: '#1A1F71', borderColor: '#1A1F71' },
+  filterActive: { backgroundColor: '#6C63FF', borderColor: '#6C63FF' },
   filterText: { fontSize: 12, fontWeight: '600', color: '#6B7280' },
   filterTextActive: { color: '#FFF' },
   content: { padding: 18 },
   lessonCard: {
-    backgroundColor: '#FFF', borderRadius: 16, padding: 16, marginBottom: 12,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04,
-    shadowRadius: 6, elevation: 2,
+    backgroundColor: '#111118', borderRadius: 16, padding: 16, marginBottom: 12,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
   },
   lessonHeader: { flexDirection: 'row', alignItems: 'center' },
   lessonEmoji: {
-    width: 44, height: 44, borderRadius: 12, backgroundColor: '#F5F5FA',
+    width: 44, height: 44, borderRadius: 12, backgroundColor: '#1E1E28',
     justifyContent: 'center', alignItems: 'center', marginRight: 12,
   },
   lessonEmojiText: { fontSize: 22 },
   lessonInfo: { flex: 1 },
-  lessonTitle: { fontSize: 15, fontWeight: '700', color: '#1A1A2E' },
-  lessonSub: { fontSize: 12, color: '#9CA3AF', marginTop: 2 },
+  lessonTitle: { fontSize: 15, fontWeight: '700', color: '#F0F0F5' },
+  lessonSub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
   lessonMeta: { alignItems: 'flex-end' },
-  lessonTime: { fontSize: 11, color: '#9CA3AF', marginBottom: 4 },
+  lessonTime: { fontSize: 11, color: '#6B7280', marginBottom: 4 },
   diffBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
   diffText: { fontSize: 10, fontWeight: '700' },
   lessonContent: { marginTop: 10 },
-  divider: { height: 1, backgroundColor: '#F0F0F5', marginBottom: 12 },
-  contentText: { fontSize: 14, color: '#374151', lineHeight: 22 },
+  divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.04)', marginBottom: 12 },
+  contentText: { fontSize: 14, color: '#9CA3AF', lineHeight: 22 },
 });
 

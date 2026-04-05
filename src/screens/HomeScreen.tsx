@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Dimensions, RefreshControl, Platform, Modal, TextInput, ActivityIndicator,
+  Dimensions, RefreshControl, Platform, Modal, TextInput,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -18,6 +19,12 @@ import {
 } from '../services/expenseIntelligence';
 
 const { width } = Dimensions.get('window');
+const C = {
+  bg: '#0B0B0F', surface: '#111118', elevated: '#18181F', input: '#1E1E28',
+  primary: '#6C63FF', accent: '#F59E0B', success: '#34D399', error: '#F87171', warning: '#FBBF24',
+  text: '#F0F0F5', textSec: '#9CA3AF', textMuted: '#6B7280',
+  border: 'rgba(255,255,255,0.06)', borderActive: 'rgba(108,99,255,0.3)',
+};
 
 export default function HomeScreen({ navigation }: any) {
   const { user, buckets, goals, investableAmount, investments, recordInvestment, totalInvested } = useUser();
@@ -26,18 +33,15 @@ export default function HomeScreen({ navigation }: any) {
   const [market, setMarket] = useState<MarketData | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
 
-  // Investment modal
   const [showInvestModal, setShowInvestModal] = useState(false);
   const [investBucket, setInvestBucket] = useState<'safe' | 'growth' | 'opportunity'>('growth');
   const [investAmount, setInvestAmount] = useState('');
   const [investNote, setInvestNote] = useState('');
   const [investGoalId, setInvestGoalId] = useState<string | undefined>(undefined);
 
-  // Verdict modal (shows after recording)
   const [showVerdict, setShowVerdict] = useState(false);
   const [verdict, setVerdict] = useState<InvestmentVerdict | null>(null);
 
-  // Expense modal
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [expenseAmount, setExpenseAmount] = useState('');
   const [expenseCategory, setExpenseCategory] = useState<ExpenseCategory>('food');
@@ -45,279 +49,218 @@ export default function HomeScreen({ navigation }: any) {
 
   useEffect(() => {
     setNudge(getDailyNudge(user));
-    fetchMarket();
-    fetchExpenses();
+    getMarketData().then(setMarket).catch(() => {});
+    loadExpenses().then(setExpenses);
   }, []);
-
-  const fetchMarket = async () => {
-    try { const m = await getMarketData(); setMarket(m); } catch {}
-  };
-
-  const fetchExpenses = async () => {
-    const exps = await loadExpenses();
-    setExpenses(exps);
-  };
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     setNudge(getDailyNudge(user));
-    fetchMarket();
-    fetchExpenses();
+    getMarketData().then(setMarket).catch(() => {});
+    loadExpenses().then(setExpenses);
     setTimeout(() => setRefreshing(false), 800);
   }, [user]);
 
   const totalWealth = buckets.reduce((s, b) => s + b.currentAmount, 0);
-  const futureValue5y = calculateFutureValue(investableAmount, 12, 5);
-  const futureValue10y = calculateFutureValue(investableAmount, 12, 10);
+  const fv5 = calculateFutureValue(investableAmount, 12, 5);
+  const fv10 = calculateFutureValue(investableAmount, 12, 10);
 
-  const analysis = useMemo(() => {
-    if (!user) return null;
-    return analyzePortfolio(user, investments, buckets, goals);
-  }, [user, investments, buckets, goals]);
-
-  const expenseAnalysis: ExpenseAnalysis | null = useMemo(() => {
-    if (!user) return null;
-    return analyzeExpenses(expenses, user, investments);
-  }, [expenses, user, investments]);
-
+  const analysis = useMemo(() => user ? analyzePortfolio(user, investments, buckets, goals) : null, [user, investments, buckets, goals]);
+  const expAnalysis = useMemo(() => user ? analyzeExpenses(expenses, user, investments) : null, [expenses, user, investments]);
   const topAlerts = analysis?.insights.filter(i => i.severity === 'critical' || i.severity === 'warning').slice(0, 2) || [];
 
-  // ── Investment recording with AI verdict ──
-  const openInvestModal = (bucketId: 'safe' | 'growth' | 'opportunity') => {
-    setInvestBucket(bucketId);
-    setInvestAmount('');
-    setInvestNote('');
-    setInvestGoalId(undefined);
-    setShowInvestModal(true);
+  const openInvestModal = (b: 'safe' | 'growth' | 'opportunity') => {
+    setInvestBucket(b); setInvestAmount(''); setInvestNote(''); setInvestGoalId(undefined); setShowInvestModal(true);
   };
 
   const handleRecordInvestment = async () => {
-    const amount = parseAmount(investAmount);
-    if (amount <= 0) return;
-
-    // Record it
-    recordInvestment(amount, investBucket, investGoalId, investNote);
+    const amt = parseAmount(investAmount);
+    if (amt <= 0) return;
+    recordInvestment(amt, investBucket, investGoalId, investNote);
     setShowInvestModal(false);
-
-    // Generate AI verdict
     if (market && user) {
-      const emergencyGoal = goals.find(g => g.type === 'emergency');
-      const emergencyPercent = emergencyGoal
-        ? Math.round((emergencyGoal.currentAmount / emergencyGoal.targetAmount) * 100)
-        : 0;
-      const bucketTotal = buckets.find(b => b.id === investBucket)?.currentAmount || 0;
-
-      const v = getInvestmentVerdict(
-        amount, investBucket, market, user.riskLevel,
-        bucketTotal, totalInvested, emergencyPercent,
-      );
-      setVerdict(v);
-      setShowVerdict(true);
+      const eGoal = goals.find(g => g.type === 'emergency');
+      const ePct = eGoal ? Math.round((eGoal.currentAmount / eGoal.targetAmount) * 100) : 0;
+      const bTotal = buckets.find(b => b.id === investBucket)?.currentAmount || 0;
+      const v = getInvestmentVerdict(amt, investBucket, market, user.riskLevel, bTotal, totalInvested, ePct);
+      setVerdict(v); setShowVerdict(true);
     }
-
-    setInvestAmount('');
-    setInvestNote('');
+    setInvestAmount(''); setInvestNote('');
   };
 
-  // ── Expense recording ──
   const handleRecordExpense = async () => {
-    const amount = parseAmount(expenseAmount);
-    if (amount <= 0) return;
-    await saveExpense({ amount, category: expenseCategory, note: expenseNote, date: new Date().toISOString() });
-    setShowExpenseModal(false);
-    setExpenseAmount('');
-    setExpenseNote('');
-    fetchExpenses();
+    const amt = parseAmount(expenseAmount);
+    if (amt <= 0) return;
+    await saveExpense({ amount: amt, category: expenseCategory, note: expenseNote, date: new Date().toISOString() });
+    setShowExpenseModal(false); setExpenseAmount(''); setExpenseNote('');
+    loadExpenses().then(setExpenses);
   };
 
   const bucketGoals = goals.filter(g => g.bucket === investBucket);
-
   if (!user) return null;
 
-  const verdictColors: Record<string, string> = {
-    excellent: '#10B981', good: '#3B82F6', caution: '#F59E0B', warning: '#EF4444',
-  };
+  const vColors: Record<string, string> = { excellent: C.success, good: '#60A5FA', caution: C.warning, warning: C.error };
 
   return (
-    <View style={styles.container}>
+    <View style={s.container}>
       <StatusBar style="light" />
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFF" />}
-      >
+      <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.textMuted} />}>
+
         {/* ── Header ── */}
-        <LinearGradient colors={['#0A0A1A', '#111340', '#1A1F71']} style={styles.header}>
-          <View style={styles.headerContent}>
+        <View style={s.header}>
+          <View style={s.headerRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.greeting}>{getGreeting(user.name)}</Text>
-              <Text style={styles.tagline}>Your AI money companion</Text>
+              <Text style={s.greeting}>{getGreeting(user.name)}</Text>
+              <Text style={s.tagline}>Your AI money companion</Text>
             </View>
-            <TouchableOpacity style={styles.profileIcon} onPress={() => navigation.navigate('Profile')}>
-              <Text style={styles.profileText}>{user.name.charAt(0).toUpperCase()}</Text>
+            <TouchableOpacity style={s.avatar} onPress={() => navigation.navigate('Profile')}>
+              <Text style={s.avatarText}>{user.name.charAt(0).toUpperCase()}</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Wealth Card */}
-          <View style={styles.wealthCard}>
-            <View style={styles.wealthRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.wealthLabel}>INVESTED</Text>
-                <Text style={styles.wealthAmount}>{formatFullCurrency(totalWealth)}</Text>
+          {/* Wealth */}
+          <View style={s.wealthCard}>
+            <View style={s.wealthTop}>
+              <View>
+                <Text style={s.wLabel}>INVESTED</Text>
+                <Text style={s.wValue}>{formatFullCurrency(totalWealth)}</Text>
               </View>
-              <View style={styles.divider} />
-              <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                <Text style={styles.wealthLabel}>INVESTABLE/MO</Text>
-                <Text style={styles.wealthAmount}>{formatFullCurrency(investableAmount)}</Text>
+              <View style={s.wDivider} />
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={s.wLabel}>INVESTABLE/MO</Text>
+                <Text style={s.wValue}>{formatFullCurrency(investableAmount)}</Text>
               </View>
             </View>
-            <View style={styles.projectionRow}>
-              <View style={styles.projectionItem}>
-                <Text style={styles.projectionLabel}>5Y</Text>
-                <Text style={styles.projectionValue}>{formatFullCurrency(futureValue5y)}</Text>
+            <View style={s.wBottom}>
+              <View style={s.wProj}>
+                <Text style={s.wProjLabel}>5Y</Text>
+                <Text style={s.wProjVal}>{formatFullCurrency(fv5)}</Text>
               </View>
-              <View style={[styles.projectionItem, { borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.08)', paddingLeft: 20 }]}>
-                <Text style={styles.projectionLabel}>10Y</Text>
-                <Text style={styles.projectionValue}>{formatFullCurrency(futureValue10y)}</Text>
+              <View style={[s.wProj, { borderLeftWidth: 1, borderLeftColor: C.border, paddingLeft: 16 }]}>
+                <Text style={s.wProjLabel}>10Y</Text>
+                <Text style={s.wProjVal}>{formatFullCurrency(fv10)}</Text>
               </View>
             </View>
           </View>
-        </LinearGradient>
+        </View>
 
-        <View style={styles.content}>
+        <View style={s.body}>
           {/* ── Market Pulse ── */}
           {market && (
-            <View style={styles.marketCard}>
-              <View style={styles.marketHeader}>
-                <View style={[styles.liveDot, market.isLive && styles.liveDotActive]} />
-                <Text style={styles.marketTitle}>MARKET PULSE</Text>
+            <View style={s.card}>
+              <View style={s.cardHeader}>
+                <View style={[s.dot, market.isLive && { backgroundColor: C.success }]} />
+                <Text style={s.cardLabel}>MARKET</Text>
               </View>
-              <View style={styles.marketRow}>
-                <View style={styles.marketItem}>
-                  <Text style={styles.marketLabel}>Nifty 50</Text>
-                  <Text style={styles.marketValue}>{market.nifty50.value.toLocaleString()}</Text>
-                  <Text style={[styles.marketChange, { color: market.nifty50.changePercent >= 0 ? '#10B981' : '#EF4444' }]}>
+              <View style={s.marketRow}>
+                <View style={s.marketItem}>
+                  <Text style={s.mLabel}>Nifty 50</Text>
+                  <Text style={s.mValue}>{market.nifty50.value.toLocaleString()}</Text>
+                  <Text style={[s.mChange, { color: market.nifty50.changePercent >= 0 ? C.success : C.error }]}>
                     {market.nifty50.changePercent >= 0 ? '+' : ''}{market.nifty50.changePercent}%
                   </Text>
                 </View>
-                <View style={styles.marketItem}>
-                  <Text style={styles.marketLabel}>Sentiment</Text>
-                  <Text style={styles.marketSentiment}>
-                    {market.marketSentiment === 'fear' ? '😰' : market.marketSentiment === 'greed' ? '🤑' : '😐'}
-                  </Text>
-                  <Text style={styles.marketSentimentLabel}>{market.marketSentiment}</Text>
+                <View style={s.marketItem}>
+                  <Text style={s.mLabel}>Mood</Text>
+                  <Text style={{ fontSize: 20 }}>{market.marketSentiment === 'fear' ? '😰' : market.marketSentiment === 'greed' ? '🤑' : '😐'}</Text>
+                  <Text style={s.mLabel}>{market.marketSentiment}</Text>
                 </View>
-                <View style={styles.marketItem}>
-                  <Text style={styles.marketLabel}>FD Rate</Text>
-                  <Text style={styles.marketValue}>{market.fdRate}%</Text>
-                  <Text style={styles.marketChange}>Real: {(market.fdRate - market.inflation).toFixed(1)}%</Text>
+                <View style={s.marketItem}>
+                  <Text style={s.mLabel}>FD Real</Text>
+                  <Text style={s.mValue}>{(market.fdRate - market.inflation).toFixed(1)}%</Text>
+                  <Text style={s.mLabel}>post-inflation</Text>
                 </View>
               </View>
             </View>
           )}
 
           {/* ── AI Nudge ── */}
-          <TouchableOpacity style={styles.nudgeCard} activeOpacity={0.85} onPress={() => navigation.navigate('Saathi')}>
-            <View style={styles.nudgeHeader}>
-              <View style={styles.nudgeDot} />
-              <Text style={styles.nudgeTitle}>AI INSIGHT</Text>
+          <TouchableOpacity style={s.nudge} activeOpacity={0.8} onPress={() => navigation.navigate('Saathi')}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+              <View style={s.nudgeDot} />
+              <Text style={s.nudgeLabel}>AI INSIGHT</Text>
             </View>
-            <Text style={styles.nudgeText}>{nudge}</Text>
-            <Text style={styles.nudgeAction}>Chat with Saathi →</Text>
+            <Text style={s.nudgeText}>{nudge}</Text>
+            <Text style={s.nudgeAction}>Chat with Saathi →</Text>
           </TouchableOpacity>
 
           {/* ── Quick Actions ── */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20, marginHorizontal: -18 }} contentContainerStyle={{ paddingHorizontal: 18, gap: 10 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20, marginHorizontal: -16 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}>
             {[
-              { emoji: '💰', label: 'Invest', color: '#EEF0FF', onPress: () => openInvestModal('growth') },
-              { emoji: '💸', label: 'Expense', color: '#FEF2F2', onPress: () => setShowExpenseModal(true) },
-              { emoji: '✨', label: 'Ask AI', color: '#F0FDF4', onPress: () => navigation.navigate('Saathi') },
-              { emoji: '📊', label: 'SIP Calc', color: '#E8F5E9', onPress: () => navigation.navigate('SIPCalculator') },
-              { emoji: '📚', label: 'Learn', color: '#F3E8FF', onPress: () => navigation.navigate('Learn') },
-              { emoji: '🌱', label: 'Garden', color: '#F0FDF4', onPress: () => navigation.navigate('Garden') },
+              { emoji: '💰', label: 'Invest', onPress: () => openInvestModal('growth') },
+              { emoji: '💸', label: 'Expense', onPress: () => setShowExpenseModal(true) },
+              { emoji: '✨', label: 'Ask AI', onPress: () => navigation.navigate('Saathi') },
+              { emoji: '📊', label: 'SIP Calc', onPress: () => navigation.navigate('SIPCalculator') },
+              { emoji: '📚', label: 'Learn', onPress: () => navigation.navigate('Learn') },
+              { emoji: '🌱', label: 'Garden', onPress: () => navigation.navigate('Garden') },
             ].map((a, i) => (
-              <TouchableOpacity key={i} style={styles.actionChip} onPress={a.onPress} activeOpacity={0.7}>
-                <View style={[styles.actionChipIcon, { backgroundColor: a.color }]}>
-                  <Text style={{ fontSize: 18 }}>{a.emoji}</Text>
-                </View>
-                <Text style={styles.actionChipLabel}>{a.label}</Text>
+              <TouchableOpacity key={i} style={s.qAction} onPress={a.onPress} activeOpacity={0.7}>
+                <View style={s.qIcon}><Text style={{ fontSize: 18 }}>{a.emoji}</Text></View>
+                <Text style={s.qLabel}>{a.label}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
 
-          {/* ── Expense Summary (if tracking) ── */}
-          {expenseAnalysis && expenses.length > 0 && (
-            <View style={styles.expenseCard}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Spending This Month</Text>
-                <TouchableOpacity onPress={() => setShowExpenseModal(true)}>
-                  <Text style={styles.viewAll}>+ Add</Text>
-                </TouchableOpacity>
+          {/* ── Expense Summary ── */}
+          {expAnalysis && expenses.length > 0 && (
+            <View style={s.card}>
+              <View style={s.cardHeaderRow}>
+                <Text style={s.sectionTitle}>Spending</Text>
+                <TouchableOpacity onPress={() => setShowExpenseModal(true)}><Text style={s.link}>+ Add</Text></TouchableOpacity>
               </View>
-              <View style={styles.expenseRow}>
-                <View>
-                  <Text style={styles.expenseTotal}>₹{expenseAnalysis.totalThisMonth.toLocaleString('en-IN')}</Text>
-                  <Text style={styles.expenseBudget}>of ₹{user.monthlyExpense.toLocaleString('en-IN')} budget</Text>
-                </View>
-                <View style={styles.budgetMeter}>
-                  <View style={[styles.budgetFill, {
-                    width: `${Math.min(100, expenseAnalysis.budgetUsed)}%`,
-                    backgroundColor: expenseAnalysis.budgetUsed > 80 ? '#EF4444' : expenseAnalysis.budgetUsed > 60 ? '#F59E0B' : '#10B981',
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6 }}>
+                <Text style={s.expTotal}>₹{expAnalysis.totalThisMonth.toLocaleString('en-IN')}</Text>
+                <View style={s.budgetBar}>
+                  <View style={[s.budgetFill, {
+                    width: `${Math.min(100, expAnalysis.budgetUsed)}%`,
+                    backgroundColor: expAnalysis.budgetUsed > 80 ? C.error : expAnalysis.budgetUsed > 60 ? C.warning : C.success,
                   }]} />
                 </View>
-                <Text style={[styles.budgetPercent, {
-                  color: expenseAnalysis.budgetUsed > 80 ? '#EF4444' : '#6B7280',
-                }]}>{expenseAnalysis.budgetUsed}%</Text>
+                <Text style={[s.budgetPct, { color: expAnalysis.budgetUsed > 80 ? C.error : C.textMuted }]}>{expAnalysis.budgetUsed}%</Text>
               </View>
-              {expenseAnalysis.warnings.filter(w => w.severity === 'critical' || w.severity === 'warning').slice(0, 1).map(w => (
-                <View key={w.id} style={styles.expenseWarning}>
-                  <Text style={styles.expenseWarningText}>{w.title}</Text>
-                </View>
-              ))}
             </View>
           )}
 
-          {/* ── AI Alerts ── */}
+          {/* ── Alerts ── */}
           {topAlerts.length > 0 && (
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>AI Alerts</Text>
-                <TouchableOpacity onPress={() => navigation.navigate('Insights')}>
-                  <Text style={styles.viewAll}>All insights →</Text>
-                </TouchableOpacity>
+            <View style={s.section}>
+              <View style={s.cardHeaderRow}>
+                <Text style={s.sectionTitle}>AI Alerts</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Insights')}><Text style={s.link}>All →</Text></TouchableOpacity>
               </View>
-              {topAlerts.map(alert => (
-                <View key={alert.id} style={[styles.alertCard, { borderLeftColor: alert.severity === 'critical' ? '#EF4444' : '#F59E0B' }]}>
-                  <Text style={styles.alertTitle}>{alert.title}</Text>
-                  <Text style={styles.alertDesc}>{alert.description}</Text>
+              {topAlerts.map(a => (
+                <View key={a.id} style={[s.alertCard, { borderLeftColor: a.severity === 'critical' ? C.error : C.warning }]}>
+                  <Text style={s.alertTitle}>{a.title}</Text>
+                  <Text style={s.alertDesc}>{a.description}</Text>
                 </View>
               ))}
             </View>
           )}
 
           {/* ── Buckets ── */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Money Buckets</Text>
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>Money Buckets</Text>
             {buckets.map(b => (
               <MoneyBucketCard key={b.id} bucket={b} investableAmount={investableAmount} onInvest={() => openInvestModal(b.id)} />
             ))}
           </View>
 
-          {/* ── Recent Activity ── */}
+          {/* ── Activity ── */}
           {investments.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Recent Activity</Text>
+            <View style={s.section}>
+              <Text style={s.sectionTitle}>Recent Activity</Text>
               {investments.slice(0, 4).map(inv => {
-                const bName = inv.bucket === 'safe' ? '🟢' : inv.bucket === 'growth' ? '🟡' : '🔴';
+                const dot = inv.bucket === 'safe' ? C.success : inv.bucket === 'growth' ? C.warning : '#F472B6';
                 const g = inv.goalId ? goals.find(gl => gl.id === inv.goalId) : null;
                 const d = new Date(inv.date);
                 return (
-                  <View key={inv.id} style={styles.activityItem}>
-                    <Text style={styles.activityBucket}>{bName}</Text>
+                  <View key={inv.id} style={s.actItem}>
+                    <View style={[s.actDot, { backgroundColor: dot }]} />
                     <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text style={styles.activityNote}>{inv.note || (g ? g.name : 'Investment')}</Text>
-                      <Text style={styles.activityDate}>{d.getDate()}/{d.getMonth() + 1}</Text>
+                      <Text style={s.actNote}>{inv.note || (g ? g.name : 'Investment')}</Text>
+                      <Text style={s.actDate}>{d.getDate()}/{d.getMonth() + 1}</Text>
                     </View>
-                    <Text style={styles.activityAmount}>+₹{inv.amount.toLocaleString('en-IN')}</Text>
+                    <Text style={s.actAmt}>+₹{inv.amount.toLocaleString('en-IN')}</Text>
                   </View>
                 );
               })}
@@ -325,10 +268,10 @@ export default function HomeScreen({ navigation }: any) {
           )}
 
           {/* ── Goals ── */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Goals</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Goals')}><Text style={styles.viewAll}>View all →</Text></TouchableOpacity>
+          <View style={s.section}>
+            <View style={s.cardHeaderRow}>
+              <Text style={s.sectionTitle}>Goals</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Goals')}><Text style={s.link}>View all →</Text></TouchableOpacity>
             </View>
             {goals.slice(0, 2).map(g => <GoalCard key={g.id} goal={g} />)}
           </View>
@@ -337,237 +280,236 @@ export default function HomeScreen({ navigation }: any) {
         </View>
       </ScrollView>
 
-      {/* ═══ Record Investment Modal ═══ */}
+      {/* ═══ INVEST MODAL ═══ */}
       <Modal visible={showInvestModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Record Investment</Text>
-            <Text style={styles.modalSubtitle}>
-              {investBucket === 'safe' ? '🟢 Safe' : investBucket === 'growth' ? '🟡 Growth' : '🔴 Opportunity'} Pocket
-            </Text>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <TouchableOpacity style={s.modalBg} activeOpacity={1} onPress={() => setShowInvestModal(false)}>
+            <TouchableOpacity activeOpacity={1} style={s.modalSheet}>
+              <View style={s.handle} />
+              <ScrollView showsVerticalScrollIndicator={false} bounces={false} keyboardShouldPersistTaps="handled">
+                <Text style={s.modalTitle}>Record Investment</Text>
+                <Text style={s.modalSub}>
+                  {investBucket === 'safe' ? '🟢 Safe' : investBucket === 'growth' ? '🟡 Growth' : '🔴 Opportunity'} Pocket
+                </Text>
 
-            <Text style={styles.fieldLabel}>Amount (₹)</Text>
-            <TextInput style={styles.modalInput} placeholder="5000" placeholderTextColor="#C0C0C0" value={investAmount} onChangeText={setInvestAmount} keyboardType="numeric" autoFocus />
+                <Text style={s.fieldLabel}>AMOUNT (₹)</Text>
+                <TextInput style={s.input} placeholder="5000" placeholderTextColor="#555" value={investAmount} onChangeText={setInvestAmount} keyboardType="numeric" autoFocus />
 
-            {bucketGoals.length > 0 && (
-              <>
-                <Text style={styles.fieldLabel}>Link to Goal</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-                  <View style={{ flexDirection: 'row', gap: 8 }}>
-                    <TouchableOpacity style={[styles.chip, !investGoalId && styles.chipActive]} onPress={() => setInvestGoalId(undefined)}>
-                      <Text style={[styles.chipText, !investGoalId && styles.chipTextActive]}>None</Text>
-                    </TouchableOpacity>
-                    {bucketGoals.map(g => (
-                      <TouchableOpacity key={g.id} style={[styles.chip, investGoalId === g.id && styles.chipActive]} onPress={() => setInvestGoalId(g.id)}>
-                        <Text style={[styles.chipText, investGoalId === g.id && styles.chipTextActive]}>{g.emoji} {g.name}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </ScrollView>
-              </>
-            )}
+                {bucketGoals.length > 0 && (
+                  <>
+                    <Text style={s.fieldLabel}>LINK TO GOAL</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
+                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <TouchableOpacity style={[s.chip, !investGoalId && s.chipOn]} onPress={() => setInvestGoalId(undefined)}>
+                          <Text style={[s.chipTxt, !investGoalId && s.chipTxtOn]}>None</Text>
+                        </TouchableOpacity>
+                        {bucketGoals.map(g => (
+                          <TouchableOpacity key={g.id} style={[s.chip, investGoalId === g.id && s.chipOn]} onPress={() => setInvestGoalId(g.id)}>
+                            <Text style={[s.chipTxt, investGoalId === g.id && s.chipTxtOn]}>{g.emoji} {g.name}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </ScrollView>
+                  </>
+                )}
 
-            <Text style={styles.fieldLabel}>Note</Text>
-            <TextInput style={styles.modalInput} placeholder="Monthly SIP" placeholderTextColor="#C0C0C0" value={investNote} onChangeText={setInvestNote} />
+                <Text style={s.fieldLabel}>NOTE</Text>
+                <TextInput style={s.input} placeholder="Monthly SIP" placeholderTextColor="#555" value={investNote} onChangeText={setInvestNote} />
 
-            <View style={styles.modalBtnRow}>
-              <TouchableOpacity style={styles.modalBtnSecondary} onPress={() => setShowInvestModal(false)}>
-                <Text style={styles.modalBtnSecondaryText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.modalBtnPrimary} onPress={handleRecordInvestment}>
-                <LinearGradient colors={['#1A1F71', '#3F51B5']} style={styles.modalBtnGradient}>
-                  <Text style={styles.modalBtnPrimaryText}>Record ✅</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+                <View style={s.btnRow}>
+                  <TouchableOpacity style={s.btnSec} onPress={() => setShowInvestModal(false)}>
+                    <Text style={s.btnSecTxt}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={s.btnPri} onPress={handleRecordInvestment}>
+                    <LinearGradient colors={['#6C63FF', '#4F46E5']} style={s.btnGrad}>
+                      <Text style={s.btnPriTxt}>Record ✅</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
       </Modal>
 
-      {/* ═══ AI Verdict Modal (after recording) ═══ */}
+      {/* ═══ VERDICT MODAL ═══ */}
       <Modal visible={showVerdict} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
+        <View style={s.verdictBg}>
           {verdict && (
-            <View style={styles.verdictCard}>
-              <View style={[styles.verdictBadge, { backgroundColor: verdictColors[verdict.rating] }]}>
-                <Text style={styles.verdictBadgeText}>
+            <View style={s.verdictCard}>
+              <View style={[s.verdictBadge, { backgroundColor: vColors[verdict.rating] }]}>
+                <Text style={s.verdictBadgeText}>
                   {verdict.rating === 'excellent' ? '🎯' : verdict.rating === 'good' ? '👍' : verdict.rating === 'caution' ? '⚠️' : '🚨'} {verdict.rating.toUpperCase()}
                 </Text>
               </View>
-              <Text style={styles.verdictTitle}>{verdict.title}</Text>
-              <Text style={styles.verdictMessage}>{verdict.message}</Text>
-              {verdict.tips.map((tip, i) => (
-                <View key={i} style={styles.verdictTip}>
-                  <Text style={styles.verdictTipText}>• {tip}</Text>
-                </View>
-              ))}
+              <Text style={s.verdictTitle}>{verdict.title}</Text>
+              <Text style={s.verdictMsg}>{verdict.message}</Text>
+              {verdict.tips.map((t, i) => <Text key={i} style={s.verdictTip}>• {t}</Text>)}
               {market && market.sectorHighlights.length > 0 && (
-                <View style={styles.verdictMarket}>
-                  <Text style={styles.verdictMarketTitle}>Market Signals</Text>
-                  {market.sectorHighlights.slice(0, 2).map((s, i) => (
-                    <Text key={i} style={styles.verdictMarketItem}>
-                      {s.trend === 'bullish' ? '📈' : s.trend === 'bearish' ? '📉' : '➡️'} {s.name}: {s.note}
-                    </Text>
+                <View style={s.verdictMkt}>
+                  <Text style={s.verdictMktTitle}>Market Signals</Text>
+                  {market.sectorHighlights.slice(0, 2).map((sig, i) => (
+                    <Text key={i} style={s.verdictMktItem}>{sig.trend === 'bullish' ? '📈' : sig.trend === 'bearish' ? '📉' : '➡️'} {sig.name}: {sig.note}</Text>
                   ))}
                 </View>
               )}
-              <TouchableOpacity style={styles.verdictClose} onPress={() => setShowVerdict(false)}>
-                <Text style={styles.verdictCloseText}>Got it 👍</Text>
+              <TouchableOpacity style={s.verdictBtn} onPress={() => setShowVerdict(false)}>
+                <Text style={s.verdictBtnTxt}>Got it 👍</Text>
               </TouchableOpacity>
             </View>
           )}
         </View>
       </Modal>
 
-      {/* ═══ Expense Modal ═══ */}
+      {/* ═══ EXPENSE MODAL ═══ */}
       <Modal visible={showExpenseModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Track Expense 💸</Text>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <TouchableOpacity style={s.modalBg} activeOpacity={1} onPress={() => setShowExpenseModal(false)}>
+            <TouchableOpacity activeOpacity={1} style={s.modalSheet}>
+              <View style={s.handle} />
+              <ScrollView showsVerticalScrollIndicator={false} bounces={false} keyboardShouldPersistTaps="handled">
+                <Text style={s.modalTitle}>Track Expense 💸</Text>
 
-            <Text style={styles.fieldLabel}>Amount (₹)</Text>
-            <TextInput style={styles.modalInput} placeholder="500" placeholderTextColor="#C0C0C0" value={expenseAmount} onChangeText={setExpenseAmount} keyboardType="numeric" autoFocus />
+                <Text style={s.fieldLabel}>AMOUNT (₹)</Text>
+                <TextInput style={s.input} placeholder="500" placeholderTextColor="#555" value={expenseAmount} onChangeText={setExpenseAmount} keyboardType="numeric" autoFocus />
 
-            <Text style={styles.fieldLabel}>Category</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                {EXPENSE_CATEGORIES.map(c => (
-                  <TouchableOpacity key={c.key} style={[styles.chip, expenseCategory === c.key && styles.chipActive]} onPress={() => setExpenseCategory(c.key)}>
-                    <Text style={[styles.chipText, expenseCategory === c.key && styles.chipTextActive]}>{c.emoji} {c.label}</Text>
+                <Text style={s.fieldLabel}>CATEGORY</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    {EXPENSE_CATEGORIES.map(c => (
+                      <TouchableOpacity key={c.key} style={[s.chip, expenseCategory === c.key && s.chipOn]} onPress={() => setExpenseCategory(c.key)}>
+                        <Text style={[s.chipTxt, expenseCategory === c.key && s.chipTxtOn]}>{c.emoji} {c.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </ScrollView>
+
+                <Text style={s.fieldLabel}>NOTE</Text>
+                <TextInput style={s.input} placeholder="Zomato order" placeholderTextColor="#555" value={expenseNote} onChangeText={setExpenseNote} />
+
+                <View style={s.btnRow}>
+                  <TouchableOpacity style={s.btnSec} onPress={() => setShowExpenseModal(false)}>
+                    <Text style={s.btnSecTxt}>Cancel</Text>
                   </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
-
-            <Text style={styles.fieldLabel}>Note</Text>
-            <TextInput style={styles.modalInput} placeholder="Zomato order" placeholderTextColor="#C0C0C0" value={expenseNote} onChangeText={setExpenseNote} />
-
-            <View style={styles.modalBtnRow}>
-              <TouchableOpacity style={styles.modalBtnSecondary} onPress={() => setShowExpenseModal(false)}>
-                <Text style={styles.modalBtnSecondaryText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.modalBtnPrimary} onPress={handleRecordExpense}>
-                <LinearGradient colors={['#EF4444', '#DC2626']} style={styles.modalBtnGradient}>
-                  <Text style={styles.modalBtnPrimaryText}>Record Expense</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+                  <TouchableOpacity style={s.btnPri} onPress={handleRecordExpense}>
+                    <LinearGradient colors={[C.error, '#DC2626']} style={s.btnGrad}>
+                      <Text style={s.btnPriTxt}>Record Expense</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FC' },
-  header: { paddingTop: Platform.OS === 'ios' ? 58 : 44, paddingBottom: 70, paddingHorizontal: 20 },
-  headerContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  greeting: { fontSize: 20, fontWeight: '700', color: '#FFF', letterSpacing: -0.3 },
-  tagline: { fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 },
-  profileIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.12)', justifyContent: 'center', alignItems: 'center' },
-  profileText: { fontSize: 15, fontWeight: '800', color: '#FFF' },
-  wealthCard: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 16, padding: 16, marginTop: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
-  wealthRow: { flexDirection: 'row', alignItems: 'center' },
-  wealthLabel: { fontSize: 10, color: 'rgba(255,255,255,0.4)', letterSpacing: 1, fontWeight: '600' },
-  wealthAmount: { fontSize: 20, fontWeight: '800', color: '#FFF', marginTop: 2 },
-  divider: { width: 1, height: 32, backgroundColor: 'rgba(255,255,255,0.1)', marginHorizontal: 14 },
-  projectionRow: { flexDirection: 'row', marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)' },
-  projectionItem: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
-  projectionLabel: { fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: '600' },
-  projectionValue: { fontSize: 14, fontWeight: '700', color: '#81C784' },
-  content: { marginTop: -44, paddingHorizontal: 18 },
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.bg },
+
+  // Header
+  header: { backgroundColor: C.bg, paddingTop: Platform.OS === 'ios' ? 58 : 44, paddingBottom: 20, paddingHorizontal: 20 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  greeting: { fontSize: 20, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  tagline: { fontSize: 12, color: C.textMuted, marginTop: 2 },
+  avatar: { width: 36, height: 36, borderRadius: 12, backgroundColor: C.elevated, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: C.border },
+  avatarText: { fontSize: 14, fontWeight: '800', color: C.primary },
+
+  // Wealth
+  wealthCard: { backgroundColor: C.surface, borderRadius: 16, padding: 16, marginTop: 14, borderWidth: 1, borderColor: C.border },
+  wealthTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  wLabel: { fontSize: 10, color: C.textMuted, letterSpacing: 1, fontWeight: '600' },
+  wValue: { fontSize: 22, fontWeight: '800', color: C.text, marginTop: 2 },
+  wDivider: { width: 1, height: 28, backgroundColor: C.border },
+  wBottom: { flexDirection: 'row', marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: C.border },
+  wProj: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
+  wProjLabel: { fontSize: 10, color: C.textMuted, fontWeight: '600' },
+  wProjVal: { fontSize: 14, fontWeight: '700', color: C.success },
+
+  body: { paddingHorizontal: 16 },
+
+  // Card
+  card: { backgroundColor: C.surface, borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: C.border },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  cardLabel: { fontSize: 10, fontWeight: '700', color: C.textMuted, letterSpacing: 1 },
+  dot: { width: 5, height: 5, borderRadius: 3, backgroundColor: C.textMuted, marginRight: 6 },
 
   // Market
-  marketCard: { backgroundColor: '#FFF', borderRadius: 14, padding: 14, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 6, elevation: 2 },
-  marketHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#D1D5DB', marginRight: 6 },
-  liveDotActive: { backgroundColor: '#10B981' },
-  marketTitle: { fontSize: 10, fontWeight: '700', color: '#9CA3AF', letterSpacing: 1 },
   marketRow: { flexDirection: 'row', justifyContent: 'space-around' },
   marketItem: { alignItems: 'center' },
-  marketLabel: { fontSize: 10, color: '#9CA3AF', marginBottom: 2 },
-  marketValue: { fontSize: 16, fontWeight: '800', color: '#1A1A2E' },
-  marketChange: { fontSize: 11, fontWeight: '600', color: '#6B7280', marginTop: 1 },
-  marketSentiment: { fontSize: 22 },
-  marketSentimentLabel: { fontSize: 10, color: '#6B7280', textTransform: 'capitalize', fontWeight: '600' },
+  mLabel: { fontSize: 10, color: C.textMuted },
+  mValue: { fontSize: 16, fontWeight: '800', color: C.text, marginVertical: 1 },
+  mChange: { fontSize: 11, fontWeight: '600' },
 
   // Nudge
-  nudgeCard: { backgroundColor: '#FFF', borderRadius: 14, padding: 14, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: '#FF9933', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 4, elevation: 1 },
-  nudgeHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
-  nudgeDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#FF9933', marginRight: 6 },
-  nudgeTitle: { fontSize: 10, fontWeight: '700', color: '#FF9933', letterSpacing: 1 },
-  nudgeText: { fontSize: 13, color: '#374151', lineHeight: 19 },
-  nudgeAction: { fontSize: 12, color: '#1A1F71', fontWeight: '600', marginTop: 8 },
+  nudge: { backgroundColor: C.surface, borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: C.border, borderLeftWidth: 3, borderLeftColor: C.accent },
+  nudgeDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: C.accent, marginRight: 6 },
+  nudgeLabel: { fontSize: 10, fontWeight: '700', color: C.accent, letterSpacing: 1 },
+  nudgeText: { fontSize: 13, color: C.textSec, lineHeight: 19 },
+  nudgeAction: { fontSize: 12, color: C.primary, fontWeight: '600', marginTop: 8 },
 
   // Quick actions
-  actionChip: { alignItems: 'center', width: 62 },
-  actionChipIcon: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
-  actionChipLabel: { fontSize: 10, fontWeight: '600', color: '#6B7280' },
+  qAction: { alignItems: 'center', width: 58 },
+  qIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: C.elevated, justifyContent: 'center', alignItems: 'center', marginBottom: 4, borderWidth: 1, borderColor: C.border },
+  qLabel: { fontSize: 10, fontWeight: '600', color: C.textMuted },
 
   // Expense
-  expenseCard: { backgroundColor: '#FFF', borderRadius: 14, padding: 14, marginBottom: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 4, elevation: 1 },
-  expenseRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 10 },
-  expenseTotal: { fontSize: 18, fontWeight: '800', color: '#1A1A2E' },
-  expenseBudget: { fontSize: 10, color: '#9CA3AF' },
-  budgetMeter: { flex: 1, height: 6, backgroundColor: '#F0F0F5', borderRadius: 3, overflow: 'hidden' },
+  expTotal: { fontSize: 17, fontWeight: '800', color: C.text },
+  budgetBar: { flex: 1, height: 5, backgroundColor: C.input, borderRadius: 3, overflow: 'hidden' },
   budgetFill: { height: '100%', borderRadius: 3 },
-  budgetPercent: { fontSize: 12, fontWeight: '700', width: 36, textAlign: 'right' },
-  expenseWarning: { backgroundColor: '#FEF3C7', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginTop: 8 },
-  expenseWarningText: { fontSize: 11, color: '#92400E', fontWeight: '600' },
+  budgetPct: { fontSize: 12, fontWeight: '700', width: 34, textAlign: 'right' },
 
   // Section
   section: { marginBottom: 18 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#1A1A2E', letterSpacing: -0.3 },
-  sectionSubtitle: { fontSize: 11, color: '#9CA3AF', marginBottom: 10 },
-  viewAll: { fontSize: 12, color: '#1A1F71', fontWeight: '600' },
+  sectionTitle: { fontSize: 15, fontWeight: '700', color: C.text, letterSpacing: -0.2, marginBottom: 8 },
+  link: { fontSize: 12, color: C.primary, fontWeight: '600' },
 
   // Alerts
-  alertCard: { backgroundColor: '#FFF', borderRadius: 12, padding: 12, marginBottom: 8, borderLeftWidth: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.02, shadowRadius: 3, elevation: 1 },
-  alertTitle: { fontSize: 12, fontWeight: '700', color: '#1A1A2E', marginBottom: 2 },
-  alertDesc: { fontSize: 11, color: '#6B7280', lineHeight: 16 },
+  alertCard: { backgroundColor: C.surface, borderRadius: 12, padding: 12, marginBottom: 6, borderLeftWidth: 3, borderWidth: 1, borderColor: C.border },
+  alertTitle: { fontSize: 12, fontWeight: '700', color: C.text, marginBottom: 2 },
+  alertDesc: { fontSize: 11, color: C.textMuted, lineHeight: 16 },
 
   // Activity
-  activityItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 12, padding: 12, marginBottom: 6 },
-  activityBucket: { fontSize: 16 },
-  activityNote: { fontSize: 13, fontWeight: '600', color: '#374151' },
-  activityDate: { fontSize: 10, color: '#9CA3AF', marginTop: 1 },
-  activityAmount: { fontSize: 14, fontWeight: '700', color: '#10B981' },
+  actItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.surface, borderRadius: 12, padding: 12, marginBottom: 5, borderWidth: 1, borderColor: C.border },
+  actDot: { width: 8, height: 8, borderRadius: 4 },
+  actNote: { fontSize: 13, fontWeight: '600', color: C.text },
+  actDate: { fontSize: 10, color: C.textMuted, marginTop: 1 },
+  actAmt: { fontSize: 14, fontWeight: '700', color: C.success },
 
   // Modals
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 22, paddingBottom: Platform.OS === 'ios' ? 36 : 22, maxHeight: '85%' },
-  modalHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#E5E7EB', alignSelf: 'center', marginBottom: 16 },
-  modalTitle: { fontSize: 20, fontWeight: '800', color: '#1A1A2E' },
-  modalSubtitle: { fontSize: 13, color: '#6B7280', marginTop: 2, marginBottom: 16 },
-  fieldLabel: { fontSize: 11, fontWeight: '600', color: '#9CA3AF', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
-  modalInput: { backgroundColor: '#F5F5FA', borderRadius: 12, paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 13 : 10, fontSize: 16, fontWeight: '600', color: '#1A1A2E', marginBottom: 14 },
-  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: '#F5F5FA', borderWidth: 1, borderColor: '#E5E7EB' },
-  chipActive: { backgroundColor: '#1A1F71', borderColor: '#1A1F71' },
-  chipText: { fontSize: 12, fontWeight: '600', color: '#6B7280' },
-  chipTextActive: { color: '#FFF' },
-  modalBtnRow: { flexDirection: 'row', gap: 10, marginTop: 6 },
-  modalBtnSecondary: { flex: 1, paddingVertical: 13, alignItems: 'center', borderRadius: 12, backgroundColor: '#F5F5FA' },
-  modalBtnSecondaryText: { fontSize: 14, fontWeight: '600', color: '#6B7280' },
-  modalBtnPrimary: { flex: 2, borderRadius: 12, overflow: 'hidden' },
-  modalBtnGradient: { paddingVertical: 13, alignItems: 'center', borderRadius: 12 },
-  modalBtnPrimaryText: { fontSize: 14, fontWeight: '700', color: '#FFF' },
+  modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalSheet: { backgroundColor: C.elevated, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 22, paddingBottom: Platform.OS === 'ios' ? 40 : 22, maxHeight: '80%' },
+  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#333', alignSelf: 'center', marginBottom: 16 },
+  modalTitle: { fontSize: 20, fontWeight: '800', color: C.text },
+  modalSub: { fontSize: 13, color: C.textMuted, marginTop: 2, marginBottom: 16 },
+  fieldLabel: { fontSize: 10, fontWeight: '600', color: C.textMuted, marginBottom: 6, letterSpacing: 1 },
+  input: { backgroundColor: C.input, borderRadius: 12, paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 13 : 10, fontSize: 16, fontWeight: '600', color: C.text, marginBottom: 14, borderWidth: 1, borderColor: C.border },
+  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: C.input, borderWidth: 1, borderColor: C.border },
+  chipOn: { backgroundColor: C.primary, borderColor: C.primary },
+  chipTxt: { fontSize: 12, fontWeight: '600', color: C.textMuted },
+  chipTxtOn: { color: '#FFF' },
+  btnRow: { flexDirection: 'row', gap: 10, marginTop: 8 },
+  btnSec: { flex: 1, paddingVertical: 13, alignItems: 'center', borderRadius: 12, backgroundColor: C.input, borderWidth: 1, borderColor: C.border },
+  btnSecTxt: { fontSize: 14, fontWeight: '600', color: C.textSec },
+  btnPri: { flex: 2, borderRadius: 12, overflow: 'hidden' },
+  btnGrad: { paddingVertical: 13, alignItems: 'center', borderRadius: 12 },
+  btnPriTxt: { fontSize: 14, fontWeight: '700', color: '#FFF' },
 
   // Verdict
-  verdictCard: { backgroundColor: '#FFF', borderRadius: 20, padding: 24, marginHorizontal: 20, marginBottom: 40, alignSelf: 'center', width: width - 40 },
+  verdictBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', paddingHorizontal: 20 },
+  verdictCard: { backgroundColor: C.elevated, borderRadius: 20, padding: 24, borderWidth: 1, borderColor: C.border },
   verdictBadge: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, marginBottom: 12 },
-  verdictBadgeText: { color: '#FFF', fontSize: 12, fontWeight: '800', textTransform: 'uppercase' },
-  verdictTitle: { fontSize: 20, fontWeight: '800', color: '#1A1A2E', marginBottom: 6 },
-  verdictMessage: { fontSize: 14, color: '#374151', lineHeight: 21, marginBottom: 10 },
-  verdictTip: { paddingVertical: 4 },
-  verdictTipText: { fontSize: 13, color: '#6B7280', lineHeight: 19 },
-  verdictMarket: { backgroundColor: '#F8F9FC', borderRadius: 12, padding: 12, marginTop: 10 },
-  verdictMarketTitle: { fontSize: 11, fontWeight: '700', color: '#9CA3AF', letterSpacing: 0.5, marginBottom: 6 },
-  verdictMarketItem: { fontSize: 12, color: '#374151', lineHeight: 18 },
-  verdictClose: { backgroundColor: '#1A1F71', borderRadius: 12, paddingVertical: 13, alignItems: 'center', marginTop: 14 },
-  verdictCloseText: { fontSize: 14, fontWeight: '700', color: '#FFF' },
+  verdictBadgeText: { color: '#FFF', fontSize: 11, fontWeight: '800' },
+  verdictTitle: { fontSize: 20, fontWeight: '800', color: C.text, marginBottom: 6 },
+  verdictMsg: { fontSize: 14, color: C.textSec, lineHeight: 21, marginBottom: 8 },
+  verdictTip: { fontSize: 13, color: C.textMuted, lineHeight: 19, paddingVertical: 2 },
+  verdictMkt: { backgroundColor: C.input, borderRadius: 12, padding: 12, marginTop: 8, borderWidth: 1, borderColor: C.border },
+  verdictMktTitle: { fontSize: 10, fontWeight: '700', color: C.textMuted, letterSpacing: 0.5, marginBottom: 6 },
+  verdictMktItem: { fontSize: 12, color: C.textSec, lineHeight: 18 },
+  verdictBtn: { backgroundColor: C.primary, borderRadius: 12, paddingVertical: 13, alignItems: 'center', marginTop: 14 },
+  verdictBtnTxt: { fontSize: 14, fontWeight: '700', color: '#FFF' },
 });
 

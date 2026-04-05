@@ -34,7 +34,7 @@ export default function GardenScreen({ navigation }: any) {
       <StatusBar style="light" />
 
       <LinearGradient
-        colors={['#0F0F1E', '#1A1F71']}
+        colors={['#0B0B0F', '#111118']}
         style={styles.header}
       >
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginBottom: 8 }}>
@@ -99,7 +99,7 @@ export default function GardenScreen({ navigation }: any) {
 
               <View style={styles.plantProgressBar}>
                 <LinearGradient
-                  colors={['#4CAF50', '#81C784']}
+                  colors={['#34D399', '#10B981']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={[styles.plantProgressFill, { width: `${Math.max(3, plant.progress)}%` }]}
@@ -146,7 +146,7 @@ export default function GardenScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFBFF',
+    backgroundColor: '#0B0B0F',
   },
   header: {
     paddingTop: Platform.OS === 'ios' ? 56 : 44,
@@ -296,13 +296,13 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   funFact: {
-    backgroundColor: '#FFF8E1',
+    backgroundColor: 'rgba(251,191,36,0.08)',
     borderRadius: 18,
     padding: 20,
     alignItems: 'center',
     marginTop: 10,
     borderWidth: 1,
-    borderColor: '#FFE082',
+    borderColor: 'rgba(251,191,36,0.15)',
   },
   funFactEmoji: {
     fontSize: 32,

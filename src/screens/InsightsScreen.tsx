@@ -14,10 +14,10 @@ import { Insight, InsightSeverity, PortfolioAnalysis } from '../types';
 const { width } = Dimensions.get('window');
 
 const SEVERITY_CONFIG: Record<InsightSeverity, { bg: string; border: string; icon: string; color: string }> = {
-  critical: { bg: '#FEF2F2', border: '#FECACA', icon: '🚨', color: '#DC2626' },
-  warning: { bg: '#FFFBEB', border: '#FDE68A', icon: '⚠️', color: '#D97706' },
-  info: { bg: '#EFF6FF', border: '#BFDBFE', icon: '💡', color: '#2563EB' },
-  positive: { bg: '#F0FDF4', border: '#BBF7D0', icon: '✅', color: '#16A34A' },
+  critical: { bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)', icon: '🚨', color: '#F87171' },
+  warning: { bg: 'rgba(251,191,36,0.1)', border: 'rgba(251,191,36,0.2)', icon: '⚠️', color: '#FBBF24' },
+  info: { bg: 'rgba(96,165,250,0.1)', border: 'rgba(96,165,250,0.2)', icon: '💡', color: '#60A5FA' },
+  positive: { bg: 'rgba(52,211,153,0.1)', border: 'rgba(52,211,153,0.2)', icon: '✅', color: '#34D399' },
 };
 
 export default function InsightsScreen({ navigation }: any) {
@@ -48,10 +48,10 @@ export default function InsightsScreen({ navigation }: any) {
     <View style={styles.container}>
       <StatusBar style="light" />
 
-      <LinearGradient colors={['#0F0F1E', '#1A1F71']} style={styles.header}>
+      <View style={styles.header}>
         <Text style={styles.headerTitle}>AI Insights 🧠</Text>
         <Text style={styles.headerSub}>Data-driven portfolio intelligence</Text>
-      </LinearGradient>
+      </View>
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -237,12 +237,12 @@ export default function InsightsScreen({ navigation }: any) {
             <Text style={styles.cardTitle}>Expense Intelligence 💸</Text>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
               <View>
-                <Text style={{ fontSize: 10, color: '#9CA3AF' }}>Spent This Month</Text>
-                <Text style={{ fontSize: 18, fontWeight: '800', color: '#1A1A2E' }}>₹{expenseAnalysis.totalThisMonth.toLocaleString('en-IN')}</Text>
+                <Text style={{ fontSize: 10, color: '#6B7280' }}>Spent This Month</Text>
+                <Text style={{ fontSize: 18, fontWeight: '800', color: '#F0F0F5' }}>₹{expenseAnalysis.totalThisMonth.toLocaleString('en-IN')}</Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
-                <Text style={{ fontSize: 10, color: '#9CA3AF' }}>Budget Used</Text>
-                <Text style={{ fontSize: 18, fontWeight: '800', color: expenseAnalysis.budgetUsed > 80 ? '#EF4444' : '#1A1A2E' }}>{expenseAnalysis.budgetUsed}%</Text>
+                <Text style={{ fontSize: 10, color: '#6B7280' }}>Budget Used</Text>
+                <Text style={{ fontSize: 18, fontWeight: '800', color: expenseAnalysis.budgetUsed > 80 ? '#F87171' : '#F0F0F5' }}>{expenseAnalysis.budgetUsed}%</Text>
               </View>
             </View>
             {expenseAnalysis.categoryBreakdown.slice(0, 4).map(c => {
@@ -250,17 +250,17 @@ export default function InsightsScreen({ navigation }: any) {
               return (
                 <View key={c.category} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                   <Text style={{ fontSize: 14, width: 24 }}>{info?.emoji}</Text>
-                  <Text style={{ flex: 1, fontSize: 12, color: '#374151' }}>{info?.label}</Text>
-                  <View style={{ width: 80, height: 5, backgroundColor: '#F0F0F5', borderRadius: 3, overflow: 'hidden', marginRight: 8 }}>
-                    <View style={{ width: `${c.percent}%`, height: '100%', backgroundColor: '#3F51B5', borderRadius: 3 }} />
+                  <Text style={{ flex: 1, fontSize: 12, color: '#9CA3AF' }}>{info?.label}</Text>
+                  <View style={{ width: 80, height: 5, backgroundColor: '#1E1E28', borderRadius: 3, overflow: 'hidden', marginRight: 8 }}>
+                    <View style={{ width: `${c.percent}%`, height: '100%', backgroundColor: '#6C63FF', borderRadius: 3 }} />
                   </View>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#1A1A2E', width: 50, textAlign: 'right' }}>₹{c.amount.toLocaleString('en-IN')}</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#F0F0F5', width: 50, textAlign: 'right' }}>₹{c.amount.toLocaleString('en-IN')}</Text>
                 </View>
               );
             })}
             {expenseAnalysis.warnings.filter(w => w.severity !== 'info').map(w => (
-              <View key={w.id} style={{ backgroundColor: w.severity === 'positive' ? '#F0FDF4' : '#FFFBEB', borderRadius: 8, padding: 8, marginTop: 6 }}>
-                <Text style={{ fontSize: 11, fontWeight: '600', color: w.severity === 'positive' ? '#16A34A' : '#92400E' }}>{w.title}</Text>
+              <View key={w.id} style={{ backgroundColor: w.severity === 'positive' ? 'rgba(52,211,153,0.1)' : 'rgba(251,191,36,0.1)', borderRadius: 8, padding: 8, marginTop: 6 }}>
+                <Text style={{ fontSize: 11, fontWeight: '600', color: w.severity === 'positive' ? '#34D399' : '#FBBF24' }}>{w.title}</Text>
               </View>
             ))}
           </View>
@@ -272,23 +272,23 @@ export default function InsightsScreen({ navigation }: any) {
             <Text style={styles.cardTitle}>Market Signals 📡</Text>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 10, color: '#9CA3AF' }}>Nifty 50</Text>
-                <Text style={{ fontSize: 16, fontWeight: '800', color: '#1A1A2E' }}>{market.nifty50.value.toLocaleString()}</Text>
-                <Text style={{ fontSize: 11, fontWeight: '600', color: market.nifty50.changePercent >= 0 ? '#10B981' : '#EF4444' }}>
+                <Text style={{ fontSize: 10, color: '#6B7280' }}>Nifty 50</Text>
+                <Text style={{ fontSize: 16, fontWeight: '800', color: '#F0F0F5' }}>{market.nifty50.value.toLocaleString()}</Text>
+                <Text style={{ fontSize: 11, fontWeight: '600', color: market.nifty50.changePercent >= 0 ? '#34D399' : '#F87171' }}>
                   {market.nifty50.changePercent >= 0 ? '+' : ''}{market.nifty50.changePercent}%
                 </Text>
               </View>
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 10, color: '#9CA3AF' }}>Sentiment</Text>
+                <Text style={{ fontSize: 10, color: '#6B7280' }}>Sentiment</Text>
                 <Text style={{ fontSize: 22 }}>{market.marketSentiment === 'fear' ? '😰' : market.marketSentiment === 'greed' ? '🤑' : '😐'}</Text>
                 <Text style={{ fontSize: 10, color: '#6B7280', textTransform: 'capitalize' }}>{market.marketSentiment}</Text>
               </View>
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 10, color: '#9CA3AF' }}>Real FD Return</Text>
-                <Text style={{ fontSize: 16, fontWeight: '800', color: (market.fdRate - market.inflation) > 0 ? '#10B981' : '#EF4444' }}>
+                <Text style={{ fontSize: 10, color: '#6B7280' }}>Real FD Return</Text>
+                <Text style={{ fontSize: 16, fontWeight: '800', color: (market.fdRate - market.inflation) > 0 ? '#34D399' : '#F87171' }}>
                   {(market.fdRate - market.inflation).toFixed(1)}%
                 </Text>
-                <Text style={{ fontSize: 10, color: '#9CA3AF' }}>after inflation</Text>
+                <Text style={{ fontSize: 10, color: '#6B7280' }}>after inflation</Text>
               </View>
             </View>
             {market.sectorHighlights.map((s, i) => (
@@ -296,7 +296,7 @@ export default function InsightsScreen({ navigation }: any) {
                 <Text style={{ fontSize: 14, marginRight: 8 }}>
                   {s.trend === 'bullish' ? '📈' : s.trend === 'bearish' ? '📉' : '➡️'}
                 </Text>
-                <Text style={{ fontSize: 12, color: '#374151', flex: 1 }}>
+                <Text style={{ fontSize: 12, color: '#9CA3AF', flex: 1 }}>
                   <Text style={{ fontWeight: '700' }}>{s.name}</Text>: {s.note}
                 </Text>
               </View>
@@ -310,7 +310,7 @@ export default function InsightsScreen({ navigation }: any) {
           onPress={() => navigation.navigate('Saathi')}
           activeOpacity={0.85}
         >
-          <LinearGradient colors={['#1A1F71', '#3F51B5']} style={styles.askAIGradient}>
+          <LinearGradient colors={['#6C63FF', '#4F46E5']} style={styles.askAIGradient}>
             <Text style={styles.askAIEmoji}>✨</Text>
             <View style={{ flex: 1 }}>
               <Text style={styles.askAITitle}>Ask Saathi AI</Text>
@@ -351,65 +351,65 @@ function riskColor(risk: string) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFBFF' },
+  container: { flex: 1, backgroundColor: '#0B0B0F' },
   header: {
     paddingTop: Platform.OS === 'ios' ? 56 : 44,
-    paddingBottom: 20, paddingHorizontal: 20,
+    paddingBottom: 20, paddingHorizontal: 20, backgroundColor: '#0B0B0F',
   },
-  headerTitle: { fontSize: 24, fontWeight: '800', color: '#FFF', letterSpacing: -0.5 },
-  headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 4 },
+  headerTitle: { fontSize: 24, fontWeight: '800', color: '#F0F0F5', letterSpacing: -0.5 },
+  headerSub: { fontSize: 13, color: '#6B7280', marginTop: 4 },
   content: { padding: 18 },
   healthCard: {
-    backgroundColor: '#FFF', borderRadius: 16, padding: 20, marginBottom: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3,
+    backgroundColor: '#111118', borderRadius: 16, padding: 20, marginBottom: 14,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
   },
   healthRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
   healthScore: { alignItems: 'center' },
-  healthNumber: { fontSize: 28, fontWeight: '800', color: '#1A1A2E' },
-  healthLabel: { fontSize: 11, color: '#9CA3AF', textAlign: 'center', marginTop: 4 },
-  healthDivider: { width: 1, height: 36, backgroundColor: '#F0F0F5' },
+  healthNumber: { fontSize: 28, fontWeight: '800', color: '#F0F0F5' },
+  healthLabel: { fontSize: 11, color: '#6B7280', textAlign: 'center', marginTop: 4 },
+  healthDivider: { width: 1, height: 36, backgroundColor: 'rgba(255,255,255,0.06)' },
   card: {
-    backgroundColor: '#FFF', borderRadius: 16, padding: 18, marginBottom: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 2,
+    backgroundColor: '#111118', borderRadius: 16, padding: 18, marginBottom: 14,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
   },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: '#1A1A2E', marginBottom: 14 },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: '#F0F0F5', marginBottom: 14 },
   allocRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  allocLabel: { width: 90, fontSize: 13, fontWeight: '600', color: '#374151' },
+  allocLabel: { width: 90, fontSize: 13, fontWeight: '600', color: '#9CA3AF' },
   allocBars: { flex: 1, marginHorizontal: 8 },
-  allocBarBg: { height: 8, backgroundColor: '#F0F0F5', borderRadius: 4, overflow: 'hidden', position: 'relative' },
-  allocBarTarget: { position: 'absolute', height: '100%', backgroundColor: '#E5E7EB', borderRadius: 4 },
+  allocBarBg: { height: 8, backgroundColor: '#1E1E28', borderRadius: 4, overflow: 'hidden', position: 'relative' },
+  allocBarTarget: { position: 'absolute', height: '100%', backgroundColor: '#2A2A35', borderRadius: 4 },
   allocBarActual: { position: 'absolute', height: '100%', borderRadius: 4 },
   allocNumbers: { width: 60, flexDirection: 'row', alignItems: 'baseline' },
-  allocActual: { fontSize: 14, fontWeight: '700', color: '#1A1A2E' },
-  allocTarget: { fontSize: 10, color: '#9CA3AF', marginLeft: 3 },
-  driftBadge: { backgroundColor: '#FFFBEB', borderRadius: 10, padding: 10, marginTop: 4 },
-  driftText: { fontSize: 12, color: '#92400E' },
+  allocActual: { fontSize: 14, fontWeight: '700', color: '#F0F0F5' },
+  allocTarget: { fontSize: 10, color: '#6B7280', marginLeft: 3 },
+  driftBadge: { backgroundColor: 'rgba(251,191,36,0.1)', borderRadius: 10, padding: 10, marginTop: 4 },
+  driftText: { fontSize: 12, color: '#FBBF24' },
   riskRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' },
   riskItem: { alignItems: 'center' },
-  riskLabel: { fontSize: 11, color: '#9CA3AF', marginBottom: 6 },
+  riskLabel: { fontSize: 11, color: '#6B7280', marginBottom: 6 },
   riskBadge: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 12 },
   riskBadgeText: { fontSize: 12, fontWeight: '700', color: '#FFF', textTransform: 'capitalize' },
-  riskArrow: { fontSize: 18, color: '#D1D5DB' },
+  riskArrow: { fontSize: 18, color: '#333' },
   riskMatch: { fontSize: 12, fontWeight: '700', marginTop: 6 },
   riskNote: { fontSize: 12, color: '#6B7280', marginTop: 12, lineHeight: 18 },
   goalRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
   goalEmoji: { fontSize: 22, marginRight: 10 },
   goalInfo: { flex: 1 },
-  goalName: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 4 },
-  goalBar: { height: 6, backgroundColor: '#F0F0F5', borderRadius: 3, overflow: 'hidden' },
+  goalName: { fontSize: 13, fontWeight: '600', color: '#9CA3AF', marginBottom: 4 },
+  goalBar: { height: 6, backgroundColor: '#1E1E28', borderRadius: 3, overflow: 'hidden' },
   goalBarFill: { height: '100%', borderRadius: 3 },
   goalStatus: { alignItems: 'flex-end', marginLeft: 10 },
-  goalPercent: { fontSize: 14, fontWeight: '800', color: '#1A1A2E' },
+  goalPercent: { fontSize: 14, fontWeight: '800', color: '#F0F0F5' },
   goalTrack: { fontSize: 10, fontWeight: '600', marginTop: 2 },
   trendRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'flex-end', height: 110 },
   trendCol: { alignItems: 'center', flex: 1 },
-  trendAmount: { fontSize: 9, color: '#9CA3AF', marginBottom: 4 },
+  trendAmount: { fontSize: 9, color: '#6B7280', marginBottom: 4 },
   trendBar: { width: 24, borderRadius: 6, overflow: 'hidden' },
   trendBarFill: { flex: 1, borderRadius: 6 },
   trendMonth: { fontSize: 10, color: '#6B7280', marginTop: 4 },
   trendLabel: { fontSize: 12, fontWeight: '600', textAlign: 'center', marginTop: 10 },
   section: { marginBottom: 14 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#1A1A2E', marginBottom: 12, letterSpacing: -0.3 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#F0F0F5', marginBottom: 12, letterSpacing: -0.3 },
   insightCard: {
     borderRadius: 14, padding: 14, marginBottom: 10,
     borderWidth: 1,
@@ -417,17 +417,17 @@ const styles = StyleSheet.create({
   insightHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
   insightIcon: { fontSize: 16, marginRight: 8 },
   insightTitle: { fontSize: 14, fontWeight: '700', flex: 1 },
-  insightDesc: { fontSize: 13, color: '#374151', lineHeight: 19 },
+  insightDesc: { fontSize: 13, color: '#9CA3AF', lineHeight: 19 },
   insightAction: { marginTop: 8 },
   insightActionText: { fontSize: 13, fontWeight: '700' },
   emptyCard: { alignItems: 'center', paddingVertical: 30 },
   emptyEmoji: { fontSize: 40, marginBottom: 10 },
-  emptyText: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', lineHeight: 19 },
+  emptyText: { fontSize: 13, color: '#6B7280', textAlign: 'center', lineHeight: 19 },
   askAI: { borderRadius: 16, overflow: 'hidden', marginTop: 4 },
   askAIGradient: { flexDirection: 'row', alignItems: 'center', padding: 18, borderRadius: 16 },
   askAIEmoji: { fontSize: 24, marginRight: 12 },
   askAITitle: { fontSize: 15, fontWeight: '700', color: '#FFF' },
-  askAISub: { fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 2 },
-  askAIArrow: { fontSize: 20, color: 'rgba(255,255,255,0.5)', marginLeft: 8 },
+  askAISub: { fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 2 },
+  askAIArrow: { fontSize: 20, color: 'rgba(255,255,255,0.4)', marginLeft: 8 },
 });
 

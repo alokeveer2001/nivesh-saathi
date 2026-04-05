@@ -37,16 +37,16 @@ export default function MoneyGarden() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#87CEEB', '#B0E0E6', '#98FB98', '#228B22']}
+        colors={['#0B0B1A', '#111128', '#0D2818', '#0A3012']}
         locations={[0, 0.5, 0.75, 1]}
         style={styles.garden}
       >
-        {/* Sun */}
-        <Text style={styles.sun}>☀️</Text>
+        {/* Moon */}
+        <Text style={styles.sun}>🌙</Text>
 
-        {/* Clouds */}
-        <Text style={styles.cloud1}>☁️</Text>
-        <Text style={styles.cloud2}>⛅</Text>
+        {/* Stars */}
+        <Text style={styles.cloud1}>✨</Text>
+        <Text style={styles.cloud2}>⭐</Text>
 
         {/* Plants */}
         <View style={styles.plantsRow}>
