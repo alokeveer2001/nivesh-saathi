@@ -7,6 +7,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useUser } from '../context/UserContext';
+import { useTheme } from '../context/ThemeContext';
 import MoneyBucketCard from '../components/MoneyBucketCard';
 import GoalCard from '../components/GoalCard';
 import { formatFullCurrency, getGreeting, calculateFutureValue, parseAmount } from '../utils/helpers';
@@ -19,15 +20,11 @@ import {
 } from '../services/expenseIntelligence';
 
 const { width } = Dimensions.get('window');
-const C = {
-  bg: '#0B0B0F', surface: '#111118', elevated: '#18181F', input: '#1E1E28',
-  primary: '#6C63FF', accent: '#F59E0B', success: '#34D399', error: '#F87171', warning: '#FBBF24',
-  text: '#F0F0F5', textSec: '#9CA3AF', textMuted: '#6B7280',
-  border: 'rgba(255,255,255,0.06)', borderActive: 'rgba(108,99,255,0.3)',
-};
 
 export default function HomeScreen({ navigation }: any) {
   const { user, buckets, goals, investableAmount, investments, recordInvestment, totalInvested } = useUser();
+  const { C, isDark } = useTheme();
+  const s = useMemo(() => createStyles(C), [C]);
   const [refreshing, setRefreshing] = useState(false);
   const [nudge, setNudge] = useState('');
   const [market, setMarket] = useState<MarketData | null>(null);
@@ -103,7 +100,7 @@ export default function HomeScreen({ navigation }: any) {
 
   return (
     <View style={s.container}>
-      <StatusBar style="light" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.textMuted} />}>
 
         {/* ── Header ── */}
@@ -175,7 +172,7 @@ export default function HomeScreen({ navigation }: any) {
           )}
 
           {/* ── AI Nudge ── */}
-          <TouchableOpacity style={s.nudge} activeOpacity={0.8} onPress={() => navigation.navigate('Saathi')}>
+          <TouchableOpacity style={s.nudge} activeOpacity={0.8} onPress={() => navigation.navigate('AskAI')}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
               <View style={s.nudgeDot} />
               <Text style={s.nudgeLabel}>AI INSIGHT</Text>
@@ -189,10 +186,10 @@ export default function HomeScreen({ navigation }: any) {
             {[
               { emoji: '💰', label: 'Invest', onPress: () => openInvestModal('growth') },
               { emoji: '💸', label: 'Expense', onPress: () => setShowExpenseModal(true) },
-              { emoji: '✨', label: 'Ask AI', onPress: () => navigation.navigate('Saathi') },
+              { emoji: '✨', label: 'Ask AI', onPress: () => navigation.navigate('AskAI') },
               { emoji: '📊', label: 'SIP Calc', onPress: () => navigation.navigate('SIPCalculator') },
               { emoji: '📚', label: 'Learn', onPress: () => navigation.navigate('Learn') },
-              { emoji: '🌱', label: 'Garden', onPress: () => navigation.navigate('Garden') },
+              { emoji: '🤖', label: 'Saathi', onPress: () => navigation.navigate('Companion') },
             ].map((a, i) => (
               <TouchableOpacity key={i} style={s.qAction} onPress={a.onPress} activeOpacity={0.7}>
                 <View style={s.qIcon}><Text style={{ fontSize: 18 }}>{a.emoji}</Text></View>
@@ -406,8 +403,9 @@ export default function HomeScreen({ navigation }: any) {
   );
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.bg },
+function createStyles(C: any) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: C.bg },
 
   // Header
   header: { backgroundColor: C.bg, paddingTop: Platform.OS === 'ios' ? 58 : 44, paddingBottom: 20, paddingHorizontal: 20 },
@@ -511,5 +509,6 @@ const s = StyleSheet.create({
   verdictMktItem: { fontSize: 12, color: C.textSec, lineHeight: 18 },
   verdictBtn: { backgroundColor: C.primary, borderRadius: 12, paddingVertical: 13, alignItems: 'center', marginTop: 14 },
   verdictBtnTxt: { fontSize: 14, fontWeight: '700', color: '#FFF' },
-});
+  });
+}
 

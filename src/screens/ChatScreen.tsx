@@ -1,10 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
   ScrollView, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useUser } from '../context/UserContext';
+import { useTheme } from '../context/ThemeContext';
 import ChatBubble from '../components/ChatBubble';
 import { ChatMessage } from '../types';
 import { getAIResponseAsync } from '../services/aiService';
@@ -12,10 +13,10 @@ import { getApiKey } from '../services/apiKeyStore';
 import { loadExpenses, Expense } from '../services/expenseIntelligence';
 import { generateId } from '../utils/helpers';
 
-const C = { bg: '#0B0B0F', surface: '#111118', elevated: '#18181F', input: '#1E1E28', primary: '#6C63FF', text: '#F0F0F5', textSec: '#9CA3AF', textMuted: '#6B7280', border: 'rgba(255,255,255,0.06)' };
-
 export default function ChatScreen() {
   const { user, investments, buckets, goals } = useUser();
+  const { C, isDark } = useTheme();
+  const s = useMemo(() => createStyles(C), [C]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -54,7 +55,7 @@ export default function ChatScreen() {
 
   return (
     <View style={s.container}>
-      <StatusBar style="light" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <View style={s.header}>
         <View style={s.headerAvatar}><Text style={{ fontSize: 16 }}>✨</Text></View>
         <View style={{ flex: 1 }}>
@@ -92,19 +93,21 @@ export default function ChatScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.bg },
-  header: { paddingTop: Platform.OS === 'ios' ? 56 : 44, paddingBottom: 14, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', backgroundColor: C.bg, borderBottomWidth: 1, borderBottomColor: C.border },
-  headerAvatar: { width: 36, height: 36, borderRadius: 12, backgroundColor: C.elevated, justifyContent: 'center', alignItems: 'center', marginRight: 10, borderWidth: 1, borderColor: C.border },
-  headerTitle: { fontSize: 16, fontWeight: '700', color: C.text },
-  statusDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: C.textMuted, marginRight: 5 },
-  headerSub: { fontSize: 11, color: C.textMuted },
-  sugRow: { maxHeight: 40, borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.bg },
-  sug: { backgroundColor: C.surface, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 7, borderWidth: 1, borderColor: C.border },
-  sugText: { fontSize: 12, color: C.textSec, fontWeight: '500' },
-  inputRow: { flexDirection: 'row', paddingHorizontal: 14, paddingVertical: 10, paddingBottom: Platform.OS === 'ios' ? 30 : 14, backgroundColor: C.surface, borderTopWidth: 1, borderTopColor: C.border, alignItems: 'flex-end' },
-  input: { flex: 1, backgroundColor: C.input, borderRadius: 20, paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 10 : 8, paddingTop: Platform.OS === 'ios' ? 10 : 8, fontSize: 14, color: C.text, maxHeight: 100, lineHeight: 19, borderWidth: 1, borderColor: C.border },
-  sendBtn: { marginLeft: 8, marginBottom: 1, width: 36, height: 36, borderRadius: 18, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center' },
-  sendIcon: { fontSize: 17, fontWeight: '800', color: '#FFF' },
-});
+function createStyles(C: any) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: C.bg },
+    header: { paddingTop: Platform.OS === 'ios' ? 56 : 44, paddingBottom: 14, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', backgroundColor: C.bg, borderBottomWidth: 1, borderBottomColor: C.border },
+    headerAvatar: { width: 36, height: 36, borderRadius: 12, backgroundColor: C.elevated, justifyContent: 'center', alignItems: 'center', marginRight: 10, borderWidth: 1, borderColor: C.border },
+    headerTitle: { fontSize: 16, fontWeight: '700', color: C.text },
+    statusDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: C.textMuted, marginRight: 5 },
+    headerSub: { fontSize: 11, color: C.textMuted },
+    sugRow: { maxHeight: 40, borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.bg },
+    sug: { backgroundColor: C.surface, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 7, borderWidth: 1, borderColor: C.border },
+    sugText: { fontSize: 12, color: C.textSec, fontWeight: '500' },
+    inputRow: { flexDirection: 'row', paddingHorizontal: 14, paddingVertical: 10, paddingBottom: Platform.OS === 'ios' ? 30 : 14, backgroundColor: C.surface, borderTopWidth: 1, borderTopColor: C.border, alignItems: 'flex-end' },
+    input: { flex: 1, backgroundColor: C.input, borderRadius: 20, paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 10 : 8, paddingTop: Platform.OS === 'ios' ? 10 : 8, fontSize: 14, color: C.text, maxHeight: 100, lineHeight: 19, borderWidth: 1, borderColor: C.border },
+    sendBtn: { marginLeft: 8, marginBottom: 1, width: 36, height: 36, borderRadius: 18, backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center' },
+    sendIcon: { fontSize: 17, fontWeight: '800', color: '#FFF' },
+  });
+}
 

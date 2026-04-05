@@ -8,6 +8,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Colors } from '../constants/colors';
 import { Strings } from '../constants/strings';
 import { useUser } from '../context/UserContext';
+import { useTheme } from '../context/ThemeContext';
 import { OnboardingStep, GoalType, RiskLevel, UserProfile } from '../types';
 import { parseAmount, formatFullCurrency } from '../utils/helpers';
 import { getBucketExplanation } from '../services/aiService';

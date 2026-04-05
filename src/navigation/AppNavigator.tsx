@@ -4,12 +4,12 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View, Text, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { useUser } from '../context/UserContext';
+import { useTheme } from '../context/ThemeContext';
 
 import OnboardingScreen from '../screens/OnboardingScreen';
 import HomeScreen from '../screens/HomeScreen';
 import GoalsScreen from '../screens/GoalsScreen';
 import ChatScreen from '../screens/ChatScreen';
-import GardenScreen from '../screens/GardenScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import SIPCalculatorScreen from '../screens/SIPCalculatorScreen';
 import LearnScreen from '../screens/LearnScreen';
@@ -23,20 +23,21 @@ function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focu
   return (
     <View style={styles.tabItem}>
       <Text style={[styles.tabEmoji, focused && styles.tabEmojiActive]}>{emoji}</Text>
-      <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>{label}</Text>
+      <Text style={[styles.tabLabel, focused && styles.tabLabelActive]} numberOfLines={1}>{label}</Text>
     </View>
   );
 }
 
 function MainTabs() {
+  const { C, isDark } = useTheme();
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#111118',
+          backgroundColor: C.tabBg,
           borderTopWidth: 1,
-          borderTopColor: 'rgba(255,255,255,0.06)',
+          borderTopColor: C.tabBorder,
           height: Platform.OS === 'ios' ? 82 : 66,
           paddingBottom: Platform.OS === 'ios' ? 24 : 10,
           paddingTop: 8,
@@ -60,24 +61,24 @@ function MainTabs() {
         }}
       />
       <Tab.Screen
-        name="Saathi"
+        name="AskAI"
         component={ChatScreen}
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon emoji="✨" label="Saathi" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon emoji="✨" label="Ask AI" focused={focused} />,
         }}
       />
       <Tab.Screen
         name="Companion"
         component={CompanionScreen}
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🤖" label="Jarvis" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🤖" label="Saathi" focused={focused} />,
         }}
       />
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon emoji="👤" label="Profile" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon emoji="👤" label="Me" focused={focused} />,
         }}
       />
     </Tab.Navigator>
@@ -85,8 +86,9 @@ function MainTabs() {
 }
 
 function AppStack() {
+  const { C } = useTheme();
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.stackBg } }}>
       <Stack.Screen name="MainTabs" component={MainTabs} />
       <Stack.Screen
         name="SIPCalculator"
@@ -96,11 +98,6 @@ function AppStack() {
       <Stack.Screen
         name="Learn"
         component={LearnScreen}
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen
-        name="Garden"
-        component={GardenScreen}
         options={{ animation: 'slide_from_right' }}
       />
       <Stack.Screen
@@ -114,14 +111,15 @@ function AppStack() {
 
 export default function AppNavigator() {
   const { user, isLoading } = useUser();
+  const { C, isDark } = useTheme();
 
   if (isLoading) {
     return (
-      <View style={styles.loading}>
+      <View style={[styles.loading, { backgroundColor: C.bg }]}>
         <Text style={styles.loadingEmoji}>✨</Text>
-        <Text style={styles.loadingTitle}>Nivesh Saathi</Text>
-        <Text style={styles.loadingSubtitle}>AI-powered investing</Text>
-        <ActivityIndicator size="small" color="#6C63FF" style={{ marginTop: 20 }} />
+        <Text style={[styles.loadingTitle, { color: C.text }]}>Nivesh Saathi</Text>
+        <Text style={[styles.loadingSubtitle, { color: C.textMuted }]}>AI-powered investing</Text>
+        <ActivityIndicator size="small" color={C.primary} style={{ marginTop: 20 }} />
       </View>
     );
   }
@@ -137,6 +135,7 @@ const styles = StyleSheet.create({
   tabItem: {
     alignItems: 'center',
     justifyContent: 'center',
+    width: 56,
   },
   tabEmoji: {
     fontSize: 20,
@@ -147,7 +146,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
   },
   tabLabel: {
-    fontSize: 10,
+    fontSize: 9,
     color: '#6B7280',
     marginTop: 2,
     fontWeight: '500',

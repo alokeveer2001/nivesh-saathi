@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Modal, TextInput, Alert, Platform,
@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Colors } from '../constants/colors';
 import { useUser } from '../context/UserContext';
+import { useTheme } from '../context/ThemeContext';
 import GoalCard from '../components/GoalCard';
 import { Goal, GoalType } from '../types';
 import { generateId, parseAmount, formatFullCurrency, calculateFutureValue } from '../utils/helpers';
@@ -22,6 +23,8 @@ const GOAL_PRESETS: { type: GoalType; label: string; emoji: string; defaultTarge
 
 export default function GoalsScreen() {
   const { goals, addGoal } = useUser();
+  const { C, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(C, isDark), [C, isDark]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState<typeof GOAL_PRESETS[0] | null>(null);
   const [customAmount, setCustomAmount] = useState('');
@@ -63,11 +66,11 @@ export default function GoalsScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       {/* Header */}
       <LinearGradient
-        colors={['#0B0B0F', '#111118']}
+        colors={isDark ? ['#0B0B0F', '#111118'] : ['#F8F9FC', '#FFFFFF']}
         style={styles.header}
       >
         <Text style={styles.headerTitle}>Mere Goals 🎯</Text>
@@ -169,7 +172,7 @@ export default function GoalsScreen() {
                   <TextInput
                     style={styles.fieldInput}
                     placeholder={selectedPreset.label}
-                    placeholderTextColor={Colors.textLight}
+                    placeholderTextColor={C.textMuted}
                     value={customName}
                     onChangeText={setCustomName}
                   />
@@ -180,7 +183,7 @@ export default function GoalsScreen() {
                   <TextInput
                     style={styles.fieldInput}
                     placeholder={formatFullCurrency(selectedPreset.defaultTarget)}
-                    placeholderTextColor={Colors.textLight}
+                    placeholderTextColor={C.textMuted}
                     value={customAmount}
                     onChangeText={setCustomAmount}
                     keyboardType="numeric"
@@ -237,259 +240,79 @@ export default function GoalsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0B0B0F',
-  },
-  header: {
-    paddingTop: Platform.OS === 'ios' ? 56 : 44,
-    paddingBottom: 24,
-    paddingHorizontal: 20,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: Colors.textOnPrimary,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
-    marginTop: 4,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 16,
-  },
-  summaryItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  summaryLabel: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.7)',
-    textTransform: 'uppercase',
-  },
-  summaryValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.textOnPrimary,
-    marginTop: 4,
-  },
-  summaryDivider: {
-    width: 1,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-  },
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: 18,
-    paddingTop: 20,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyEmoji: {
-    fontSize: 56,
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  addButton: {
-    marginTop: 10,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  addButtonGradient: {
-    paddingVertical: 16,
-    alignItems: 'center',
-    borderRadius: 16,
-  },
-  addButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.textOnAccent,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: Colors.overlay,
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: Colors.surface,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 40,
-    maxHeight: '80%',
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: Colors.border,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-    marginBottom: 4,
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginBottom: 20,
-  },
-  presetGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  presetCard: {
-    width: '47%',
-    backgroundColor: Colors.background,
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  presetEmoji: {
-    fontSize: 32,
-    marginBottom: 8,
-  },
-  presetLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    textAlign: 'center',
-  },
-  presetAmount: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginTop: 4,
-  },
-  presetYears: {
-    fontSize: 11,
-    color: Colors.textLight,
-    marginTop: 2,
-  },
-  customizeForm: {
-    alignItems: 'center',
-  },
-  selectedEmoji: {
-    fontSize: 48,
-    marginBottom: 8,
-  },
-  selectedLabel: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: 20,
-  },
-  formField: {
-    width: '100%',
-    marginBottom: 16,
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    marginBottom: 6,
-  },
-  fieldInput: {
-    backgroundColor: Colors.background,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: Colors.textPrimary,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  sipPreview: {
-    backgroundColor: Colors.safePocketLight,
-    borderRadius: 14,
-    padding: 16,
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  sipPreviewLabel: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-  },
-  sipPreviewAmount: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: Colors.safePocket,
-    marginTop: 4,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  cancelButton: {
-    flex: 1,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderRadius: 14,
-    backgroundColor: Colors.background,
-  },
-  cancelText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  confirmButton: {
-    flex: 2,
-    borderRadius: 14,
-    overflow: 'hidden',
-  },
-  confirmGradient: {
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderRadius: 14,
-  },
-  confirmText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.textOnPrimary,
-  },
-  closeModal: {
-    position: 'absolute',
-    top: 16,
-    right: 20,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closeText: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    fontWeight: '700',
-  },
-});
-
+function createStyles(C: any, isDark: boolean) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: C.bg },
+    header: {
+      paddingTop: Platform.OS === 'ios' ? 56 : 44,
+      paddingBottom: 24,
+      paddingHorizontal: 20,
+    },
+    headerTitle: { fontSize: 24, fontWeight: '800', color: C.text },
+    headerSubtitle: { fontSize: 14, color: C.textMuted, marginTop: 4 },
+    summaryRow: {
+      flexDirection: 'row',
+      backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(108,99,255,0.08)',
+      borderRadius: 16, padding: 16, marginTop: 16,
+    },
+    summaryItem: { flex: 1, alignItems: 'center' },
+    summaryLabel: { fontSize: 11, color: C.textMuted, textTransform: 'uppercase' },
+    summaryValue: { fontSize: 18, fontWeight: '800', color: C.text, marginTop: 4 },
+    summaryDivider: { width: 1, backgroundColor: C.border },
+    content: { flex: 1 },
+    contentContainer: { padding: 18, paddingTop: 20 },
+    emptyState: { alignItems: 'center', paddingVertical: 40 },
+    emptyEmoji: { fontSize: 56, marginBottom: 16 },
+    emptyTitle: { fontSize: 18, fontWeight: '700', color: C.text, marginBottom: 8 },
+    emptySubtitle: { fontSize: 14, color: C.textSec, textAlign: 'center', lineHeight: 20 },
+    addButton: { marginTop: 10, borderRadius: 16, overflow: 'hidden' },
+    addButtonGradient: { paddingVertical: 16, alignItems: 'center', borderRadius: 16 },
+    addButtonText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
+    modalOverlay: { flex: 1, backgroundColor: C.overlay, justifyContent: 'flex-end' },
+    modalContent: {
+      backgroundColor: C.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28,
+      paddingHorizontal: 24, paddingTop: 12, paddingBottom: 40, maxHeight: '80%',
+    },
+    modalHandle: { width: 40, height: 4, backgroundColor: C.border, borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
+    modalTitle: { fontSize: 22, fontWeight: '800', color: C.text, marginBottom: 4 },
+    modalSubtitle: { fontSize: 14, color: C.textSec, marginBottom: 20 },
+    presetGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+    presetCard: {
+      width: '47%', backgroundColor: C.input, borderRadius: 16, padding: 16,
+      alignItems: 'center', borderWidth: 1, borderColor: C.border,
+    },
+    presetEmoji: { fontSize: 32, marginBottom: 8 },
+    presetLabel: { fontSize: 14, fontWeight: '700', color: C.text, textAlign: 'center' },
+    presetAmount: { fontSize: 12, color: C.textSec, marginTop: 4 },
+    presetYears: { fontSize: 11, color: C.textMuted, marginTop: 2 },
+    customizeForm: { alignItems: 'center' },
+    selectedEmoji: { fontSize: 48, marginBottom: 8 },
+    selectedLabel: { fontSize: 18, fontWeight: '700', color: C.text, marginBottom: 20 },
+    formField: { width: '100%', marginBottom: 16 },
+    fieldLabel: { fontSize: 13, fontWeight: '600', color: C.textSec, marginBottom: 6 },
+    fieldInput: {
+      backgroundColor: C.input, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12,
+      fontSize: 16, color: C.text, borderWidth: 1, borderColor: C.border,
+    },
+    sipPreview: {
+      backgroundColor: isDark ? 'rgba(52,211,153,0.1)' : 'rgba(16,185,129,0.08)',
+      borderRadius: 14, padding: 16, width: '100%', alignItems: 'center', marginBottom: 20,
+    },
+    sipPreviewLabel: { fontSize: 13, color: C.textSec },
+    sipPreviewAmount: { fontSize: 20, fontWeight: '800', color: C.success, marginTop: 4 },
+    modalButtons: { flexDirection: 'row', gap: 12, width: '100%' },
+    cancelButton: {
+      flex: 1, paddingVertical: 14, alignItems: 'center', borderRadius: 14,
+      backgroundColor: C.input, borderWidth: 1, borderColor: C.border,
+    },
+    cancelText: { fontSize: 15, fontWeight: '600', color: C.textSec },
+    confirmButton: { flex: 2, borderRadius: 14, overflow: 'hidden' },
+    confirmGradient: { paddingVertical: 14, alignItems: 'center', borderRadius: 14 },
+    confirmText: { fontSize: 15, fontWeight: '700', color: '#FFF' },
+    closeModal: {
+      position: 'absolute', top: 16, right: 20, width: 32, height: 32, borderRadius: 16,
+      backgroundColor: C.input, justifyContent: 'center', alignItems: 'center',
+    },
+    closeText: { fontSize: 16, color: C.textSec, fontWeight: '700' },
+  });
+}

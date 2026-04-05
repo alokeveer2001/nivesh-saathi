@@ -5,6 +5,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useUser } from '../context/UserContext';
+import { useTheme } from '../context/ThemeContext';
 import { analyzePortfolio } from '../services/portfolioAnalyzer';
 import { loadExpenses, analyzeExpenses, Expense, ExpenseAnalysis, EXPENSE_CATEGORIES } from '../services/expenseIntelligence';
 import { getMarketData, MarketData } from '../services/marketIntelligence';
@@ -22,6 +23,8 @@ const SEVERITY_CONFIG: Record<InsightSeverity, { bg: string; border: string; ico
 
 export default function InsightsScreen({ navigation }: any) {
   const { user, investments, buckets, goals } = useUser();
+  const { C, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(C, isDark), [C, isDark]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [market, setMarket] = useState<MarketData | null>(null);
 
@@ -46,7 +49,7 @@ export default function InsightsScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       <View style={styles.header}>
         <Text style={styles.headerTitle}>AI Insights 🧠</Text>
@@ -307,7 +310,7 @@ export default function InsightsScreen({ navigation }: any) {
         {/* Ask AI */}
         <TouchableOpacity
           style={styles.askAI}
-          onPress={() => navigation.navigate('Saathi')}
+          onPress={() => navigation.navigate('AskAI')}
           activeOpacity={0.85}
         >
           <LinearGradient colors={['#6C63FF', '#4F46E5']} style={styles.askAIGradient}>
@@ -350,84 +353,74 @@ function riskColor(risk: string) {
   return risk === 'aggressive' ? '#DC2626' : risk === 'balanced' ? '#D97706' : '#10B981';
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0B0B0F' },
-  header: {
-    paddingTop: Platform.OS === 'ios' ? 56 : 44,
-    paddingBottom: 20, paddingHorizontal: 20, backgroundColor: '#0B0B0F',
-  },
-  headerTitle: { fontSize: 24, fontWeight: '800', color: '#F0F0F5', letterSpacing: -0.5 },
-  headerSub: { fontSize: 13, color: '#6B7280', marginTop: 4 },
+function createStyles(C: any, isDark: boolean) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.bg },
+  header: { paddingTop: Platform.OS === 'ios' ? 56 : 44, paddingBottom: 20, paddingHorizontal: 20, backgroundColor: C.bg },
+  headerTitle: { fontSize: 24, fontWeight: '800', color: C.text, letterSpacing: -0.5 },
+  headerSub: { fontSize: 13, color: C.textMuted, marginTop: 4 },
   content: { padding: 18 },
-  healthCard: {
-    backgroundColor: '#111118', borderRadius: 16, padding: 20, marginBottom: 14,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
-  },
+  healthCard: { backgroundColor: C.surface, borderRadius: 16, padding: 20, marginBottom: 14, borderWidth: 1, borderColor: C.border },
   healthRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
   healthScore: { alignItems: 'center' },
-  healthNumber: { fontSize: 28, fontWeight: '800', color: '#F0F0F5' },
-  healthLabel: { fontSize: 11, color: '#6B7280', textAlign: 'center', marginTop: 4 },
-  healthDivider: { width: 1, height: 36, backgroundColor: 'rgba(255,255,255,0.06)' },
-  card: {
-    backgroundColor: '#111118', borderRadius: 16, padding: 18, marginBottom: 14,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
-  },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: '#F0F0F5', marginBottom: 14 },
+  healthNumber: { fontSize: 28, fontWeight: '800', color: C.text },
+  healthLabel: { fontSize: 11, color: C.textMuted, textAlign: 'center', marginTop: 4 },
+  healthDivider: { width: 1, height: 36, backgroundColor: C.border },
+  card: { backgroundColor: C.surface, borderRadius: 16, padding: 18, marginBottom: 14, borderWidth: 1, borderColor: C.border },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: C.text, marginBottom: 14 },
   allocRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  allocLabel: { width: 90, fontSize: 13, fontWeight: '600', color: '#9CA3AF' },
+  allocLabel: { width: 90, fontSize: 13, fontWeight: '600', color: C.textSec },
   allocBars: { flex: 1, marginHorizontal: 8 },
-  allocBarBg: { height: 8, backgroundColor: '#1E1E28', borderRadius: 4, overflow: 'hidden', position: 'relative' },
-  allocBarTarget: { position: 'absolute', height: '100%', backgroundColor: '#2A2A35', borderRadius: 4 },
+  allocBarBg: { height: 8, backgroundColor: C.input, borderRadius: 4, overflow: 'hidden', position: 'relative' },
+  allocBarTarget: { position: 'absolute', height: '100%', backgroundColor: isDark ? '#2A2A35' : '#E5E7EB', borderRadius: 4 },
   allocBarActual: { position: 'absolute', height: '100%', borderRadius: 4 },
   allocNumbers: { width: 60, flexDirection: 'row', alignItems: 'baseline' },
-  allocActual: { fontSize: 14, fontWeight: '700', color: '#F0F0F5' },
-  allocTarget: { fontSize: 10, color: '#6B7280', marginLeft: 3 },
+  allocActual: { fontSize: 14, fontWeight: '700', color: C.text },
+  allocTarget: { fontSize: 10, color: C.textMuted, marginLeft: 3 },
   driftBadge: { backgroundColor: 'rgba(251,191,36,0.1)', borderRadius: 10, padding: 10, marginTop: 4 },
   driftText: { fontSize: 12, color: '#FBBF24' },
   riskRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' },
   riskItem: { alignItems: 'center' },
-  riskLabel: { fontSize: 11, color: '#6B7280', marginBottom: 6 },
+  riskLabel: { fontSize: 11, color: C.textMuted, marginBottom: 6 },
   riskBadge: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 12 },
   riskBadgeText: { fontSize: 12, fontWeight: '700', color: '#FFF', textTransform: 'capitalize' },
-  riskArrow: { fontSize: 18, color: '#333' },
+  riskArrow: { fontSize: 18, color: C.textMuted },
   riskMatch: { fontSize: 12, fontWeight: '700', marginTop: 6 },
-  riskNote: { fontSize: 12, color: '#6B7280', marginTop: 12, lineHeight: 18 },
+  riskNote: { fontSize: 12, color: C.textMuted, marginTop: 12, lineHeight: 18 },
   goalRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
   goalEmoji: { fontSize: 22, marginRight: 10 },
   goalInfo: { flex: 1 },
-  goalName: { fontSize: 13, fontWeight: '600', color: '#9CA3AF', marginBottom: 4 },
-  goalBar: { height: 6, backgroundColor: '#1E1E28', borderRadius: 3, overflow: 'hidden' },
+  goalName: { fontSize: 13, fontWeight: '600', color: C.textSec, marginBottom: 4 },
+  goalBar: { height: 6, backgroundColor: C.input, borderRadius: 3, overflow: 'hidden' },
   goalBarFill: { height: '100%', borderRadius: 3 },
   goalStatus: { alignItems: 'flex-end', marginLeft: 10 },
-  goalPercent: { fontSize: 14, fontWeight: '800', color: '#F0F0F5' },
+  goalPercent: { fontSize: 14, fontWeight: '800', color: C.text },
   goalTrack: { fontSize: 10, fontWeight: '600', marginTop: 2 },
   trendRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'flex-end', height: 110 },
   trendCol: { alignItems: 'center', flex: 1 },
-  trendAmount: { fontSize: 9, color: '#6B7280', marginBottom: 4 },
+  trendAmount: { fontSize: 9, color: C.textMuted, marginBottom: 4 },
   trendBar: { width: 24, borderRadius: 6, overflow: 'hidden' },
   trendBarFill: { flex: 1, borderRadius: 6 },
-  trendMonth: { fontSize: 10, color: '#6B7280', marginTop: 4 },
+  trendMonth: { fontSize: 10, color: C.textMuted, marginTop: 4 },
   trendLabel: { fontSize: 12, fontWeight: '600', textAlign: 'center', marginTop: 10 },
   section: { marginBottom: 14 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#F0F0F5', marginBottom: 12, letterSpacing: -0.3 },
-  insightCard: {
-    borderRadius: 14, padding: 14, marginBottom: 10,
-    borderWidth: 1,
-  },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: C.text, marginBottom: 12, letterSpacing: -0.3 },
+  insightCard: { borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1 },
   insightHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
   insightIcon: { fontSize: 16, marginRight: 8 },
   insightTitle: { fontSize: 14, fontWeight: '700', flex: 1 },
-  insightDesc: { fontSize: 13, color: '#9CA3AF', lineHeight: 19 },
+  insightDesc: { fontSize: 13, color: C.textSec, lineHeight: 19 },
   insightAction: { marginTop: 8 },
   insightActionText: { fontSize: 13, fontWeight: '700' },
   emptyCard: { alignItems: 'center', paddingVertical: 30 },
   emptyEmoji: { fontSize: 40, marginBottom: 10 },
-  emptyText: { fontSize: 13, color: '#6B7280', textAlign: 'center', lineHeight: 19 },
+  emptyText: { fontSize: 13, color: C.textMuted, textAlign: 'center', lineHeight: 19 },
   askAI: { borderRadius: 16, overflow: 'hidden', marginTop: 4 },
   askAIGradient: { flexDirection: 'row', alignItems: 'center', padding: 18, borderRadius: 16 },
   askAIEmoji: { fontSize: 24, marginRight: 12 },
   askAITitle: { fontSize: 15, fontWeight: '700', color: '#FFF' },
   askAISub: { fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 2 },
   askAIArrow: { fontSize: 20, color: 'rgba(255,255,255,0.4)', marginLeft: 8 },
-});
+  });
+}
 

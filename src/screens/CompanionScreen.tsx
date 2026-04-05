@@ -5,7 +5,9 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useUser } from '../context/UserContext';
+import { useTheme } from '../context/ThemeContext';
 import { analyzePortfolio } from '../services/portfolioAnalyzer';
 import { getMarketData, MarketData } from '../services/marketIntelligence';
 import { loadExpenses, analyzeExpenses, Expense, EXPENSE_CATEGORIES } from '../services/expenseIntelligence';
@@ -27,18 +29,12 @@ import {
 } from '../services/notificationEngine';
 
 const { width } = Dimensions.get('window');
-const C = {
-  bg: '#0B0B0F', surface: '#111118', elevated: '#18181F', input: '#1E1E28',
-  primary: '#6C63FF', accent: '#F59E0B', success: '#34D399', error: '#F87171', warning: '#FBBF24',
-  text: '#F0F0F5', textSec: '#9CA3AF', textMuted: '#6B7280',
-  border: 'rgba(255,255,255,0.06)',
-};
 
 const SIGNAL_ICONS: Record<string, string> = {
   buy: '📈', sell: '📉', hold: '✋', watch: '👁️', rebalance: '🔄',
   alert: '⚠️', opportunity: '💡', tax_action: '💸',
 };
-const URGENCY_COLORS: Record<string, string> = { high: C.error, medium: C.warning, low: C.primary };
+const URGENCY_COLORS: Record<string, string> = { high: '#F87171', medium: '#FBBF24', low: '#6C63FF' };
 
 const ASSET_TYPES: { key: AssetClass; label: string; emoji: string }[] = [
   { key: 'mutual_fund', label: 'Mutual Fund', emoji: '📊' },
@@ -55,6 +51,8 @@ const ASSET_TYPES: { key: AssetClass; label: string; emoji: string }[] = [
 
 export default function CompanionScreen({ navigation }: any) {
   const { user, investments, buckets, goals } = useUser();
+  const { C, isDark } = useTheme();
+  const s = useMemo(() => createStyles(C), [C]);
   const [refreshing, setRefreshing] = useState(false);
   const [market, setMarket] = useState<MarketData | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -81,7 +79,12 @@ export default function CompanionScreen({ navigation }: any) {
   const [watchName, setWatchName] = useState('');
   const [watchBuyTarget, setWatchBuyTarget] = useState('');
 
-  const loadAll = useCallback(async () => {
+  const loadAll = useCallback(async (forceRefresh: boolean = false) => {
+    // Clear market cache on force refresh to get latest data
+    if (forceRefresh) {
+      try { await AsyncStorage.removeItem('@nivesh_market_cache'); } catch {}
+    }
+
     const [m, a, l, ins, w, le, exp] = await Promise.all([
       getMarketData().catch(() => null),
       loadAssets(), loadLiabilities(), loadInsurance(),
@@ -102,15 +105,15 @@ export default function CompanionScreen({ navigation }: any) {
       const db = generateDailyBrief(user, m, nw, sigs, investments, goals);
       setBrief(db);
 
-      // Generate proactive AI notifications
-      const notifs = await generateAINotifications(user, m, investments, goals, buckets, a, sigs);
+      // Generate proactive AI notifications — always fresh on force refresh
+      const notifs = await generateAINotifications(user, m, investments, goals, buckets, a, sigs, forceRefresh);
       setNotifications(notifs);
     }
   }, [user, investments, goals, buckets]);
 
-  useEffect(() => { loadAll(); }, [loadAll]);
+  useEffect(() => { loadAll(false); }, [loadAll]);
 
-  const onRefresh = () => { setRefreshing(true); loadAll().then(() => setRefreshing(false)); };
+  const onRefresh = () => { setRefreshing(true); loadAll(true).then(() => setRefreshing(false)); };
 
   const netWorth = useMemo(() => calculateNetWorth(assets, liabilities, buckets), [assets, liabilities, buckets]);
   const taxProfile = useMemo(() => user ? calculateTaxProfile(user, assets, investments) : null, [user, assets, investments]);
@@ -163,7 +166,7 @@ export default function CompanionScreen({ navigation }: any) {
 
   return (
     <View style={s.container}>
-      <StatusBar style="light" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       {/* Header */}
       <View style={s.header}>
@@ -173,14 +176,14 @@ export default function CompanionScreen({ navigation }: any) {
             <Text style={s.headerTitle}>Saathi Companion</Text>
             <Text style={s.headerSub}>Your AI investment Jarvis</Text>
           </View>
-          <TouchableOpacity onPress={() => navigation.navigate('Saathi')} style={s.chatBtn}>
-            <Text style={{ fontSize: 14 }}>✨ Ask AI</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('AskAI')} style={s.chatBtn}>
+            <Text style={s.chatBtnText}>✨ Ask AI</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabBar} contentContainerStyle={{ paddingHorizontal: 16, gap: 6 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabBar} contentContainerStyle={{ paddingHorizontal: 16, gap: 6, alignItems: 'center' }}>
         {tabs.map(t => (
           <TouchableOpacity key={t.key} style={[s.tab, activeTab === t.key && s.tabActive]} onPress={() => setActiveTab(t.key as any)} activeOpacity={0.7}>
             <Text style={[s.tabText, activeTab === t.key && s.tabTextActive]}>{t.emoji} {t.label}</Text>
@@ -605,15 +608,17 @@ export default function CompanionScreen({ navigation }: any) {
   );
 }
 
-const s = StyleSheet.create({
+function createStyles(C: any) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   header: { paddingTop: Platform.OS === 'ios' ? 56 : 44, paddingBottom: 12, paddingHorizontal: 20, backgroundColor: C.bg, borderBottomWidth: 1, borderBottomColor: C.border },
   jarvisIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: C.surface, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: C.border },
   headerTitle: { fontSize: 17, fontWeight: '700', color: C.text },
   headerSub: { fontSize: 11, color: C.textMuted },
-  chatBtn: { backgroundColor: C.surface, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderColor: C.border },
-  tabBar: { maxHeight: 44, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.bg },
-  tab: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 18, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border },
+  chatBtn: { backgroundColor: C.primary, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7 },
+  chatBtnText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
+  tabBar: { height: 52, minHeight: 52, maxHeight: 52, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.bg },
+  tab: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 18, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, height: 36, justifyContent: 'center' },
   tabActive: { backgroundColor: C.primary, borderColor: C.primary },
   tabText: { fontSize: 12, fontWeight: '600', color: C.textMuted },
   tabTextActive: { color: '#FFF' },
@@ -731,5 +736,6 @@ const s = StyleSheet.create({
   btnPri: { flex: 2, borderRadius: 12, overflow: 'hidden' },
   btnGrad: { paddingVertical: 13, alignItems: 'center', borderRadius: 12 },
   btnPriTxt: { fontSize: 14, fontWeight: '700', color: '#FFF' },
-});
+  });
+}
 

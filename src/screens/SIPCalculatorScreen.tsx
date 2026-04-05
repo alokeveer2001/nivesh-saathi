@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput, Platform, TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { formatFullCurrency } from '../utils/helpers';
+import { useTheme } from '../context/ThemeContext';
 
 export default function SIPCalculatorScreen({ navigation }: any) {
+  const { C, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(C, isDark), [C, isDark]);
   const [monthly, setMonthly] = useState('5000');
   const [years, setYears] = useState('10');
   const [rate, setRate] = useState('12');
@@ -26,9 +29,9 @@ export default function SIPCalculatorScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
-      <LinearGradient colors={['#0B0B0F', '#111118']} style={styles.header}>
+      <LinearGradient colors={isDark ? ['#0B0B0F', '#111118'] : ['#F8F9FC', '#FFFFFF']} style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
@@ -173,74 +176,61 @@ export default function SIPCalculatorScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0B0B0F' },
+function createStyles(C: any, isDark: boolean) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.bg },
   header: {
     paddingTop: Platform.OS === 'ios' ? 56 : 44,
     paddingBottom: 20,
     paddingHorizontal: 20,
-    backgroundColor: '#0B0B0F',
+    backgroundColor: C.bg,
   },
   backBtn: { marginBottom: 8 },
-  backText: { color: '#6B7280', fontSize: 14, fontWeight: '600' },
-  headerTitle: { fontSize: 24, fontWeight: '800', color: '#F0F0F5', letterSpacing: -0.5 },
-  headerSub: { fontSize: 14, color: '#6B7280', marginTop: 4 },
+  backText: { color: C.textMuted, fontSize: 14, fontWeight: '600' },
+  headerTitle: { fontSize: 24, fontWeight: '800', color: C.text, letterSpacing: -0.5 },
+  headerSub: { fontSize: 14, color: C.textMuted, marginTop: 4 },
   content: { padding: 18 },
-  card: {
-    backgroundColor: '#111118',
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 14,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
-  },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: '#F0F0F5', marginBottom: 14 },
+  card: { backgroundColor: C.surface, borderRadius: 16, padding: 18, marginBottom: 14, borderWidth: 1, borderColor: C.border },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: C.text, marginBottom: 14 },
   inputGroup: { marginBottom: 14 },
-  label: { fontSize: 13, fontWeight: '600', color: '#6B7280', marginBottom: 6 },
-  input: {
-    backgroundColor: '#1E1E28', borderRadius: 12, paddingHorizontal: 16,
-    paddingVertical: Platform.OS === 'ios' ? 12 : 10,
-    fontSize: 18, fontWeight: '700', color: '#F0F0F5',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
-  },
+  label: { fontSize: 13, fontWeight: '600', color: C.textMuted, marginBottom: 6 },
+  input: { backgroundColor: C.input, borderRadius: 12, paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 12 : 10, fontSize: 18, fontWeight: '700', color: C.text, borderWidth: 1, borderColor: C.border },
   row: { flexDirection: 'row' },
-  quickLabel: { fontSize: 12, fontWeight: '600', color: '#6B7280', marginBottom: 8 },
+  quickLabel: { fontSize: 12, fontWeight: '600', color: C.textMuted, marginBottom: 8 },
   quickRow: { flexDirection: 'row', gap: 8 },
-  quickBtn: {
-    flex: 1, paddingVertical: 8, borderRadius: 10,
-    backgroundColor: '#1E1E28', alignItems: 'center',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
-  },
-  quickBtnActive: { backgroundColor: '#6C63FF', borderColor: '#6C63FF' },
-  quickBtnText: { fontSize: 13, fontWeight: '600', color: '#6B7280' },
+  quickBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, backgroundColor: C.input, alignItems: 'center', borderWidth: 1, borderColor: C.border },
+  quickBtnActive: { backgroundColor: C.primary, borderColor: C.primary },
+  quickBtnText: { fontSize: 13, fontWeight: '600', color: C.textMuted },
   quickBtnTextActive: { color: '#FFF' },
   resultCard: {
     borderRadius: 18, padding: 24, marginBottom: 14, alignItems: 'center',
   },
   resultLabel: { fontSize: 12, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 1 },
   resultAmount: { fontSize: 32, fontWeight: '800', color: '#FFF', marginTop: 4 },
-  resultMultiple: { fontSize: 14, color: '#34D399', fontWeight: '700', marginTop: 4 },
+  resultMultiple: { fontSize: 14, color: C.success, fontWeight: '700', marginTop: 4 },
   resultDivider: { width: '80%', height: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginVertical: 16 },
   resultRow: { flexDirection: 'row', width: '100%', justifyContent: 'space-around' },
   resultItem: { alignItems: 'center' },
   resultItemLabel: { fontSize: 11, color: 'rgba(255,255,255,0.5)' },
   resultItemValue: { fontSize: 16, fontWeight: '700', color: '#FFF', marginTop: 2 },
   barContainer: { flexDirection: 'row', height: 12, borderRadius: 6, overflow: 'hidden', marginBottom: 10 },
-  barInvested: { backgroundColor: '#333', borderRadius: 6 },
-  barGains: { backgroundColor: '#34D399', borderRadius: 6 },
+  barInvested: { backgroundColor: isDark ? '#333' : '#D1D5DB', borderRadius: 6 },
+  barGains: { backgroundColor: C.success, borderRadius: 6 },
   legendRow: { flexDirection: 'row', justifyContent: 'center', gap: 20 },
   legendItem: { flexDirection: 'row', alignItems: 'center' },
   legendDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
-  legendText: { fontSize: 12, color: '#6B7280' },
+  legendText: { fontSize: 12, color: C.textMuted },
   milestoneRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  milestoneYear: { width: 36, fontSize: 12, fontWeight: '600', color: '#6B7280' },
-  milestoneBar: { flex: 1, height: 8, backgroundColor: '#1E1E28', borderRadius: 4, overflow: 'hidden', marginHorizontal: 8 },
-  milestoneFill: { height: '100%', backgroundColor: '#6C63FF', borderRadius: 4 },
-  milestoneAmount: { fontSize: 12, fontWeight: '700', color: '#F0F0F5', width: 80, textAlign: 'right' },
+  milestoneYear: { width: 36, fontSize: 12, fontWeight: '600', color: C.textMuted },
+  milestoneBar: { flex: 1, height: 8, backgroundColor: C.input, borderRadius: 4, overflow: 'hidden', marginHorizontal: 8 },
+  milestoneFill: { height: '100%', backgroundColor: C.primary, borderRadius: 4 },
+  milestoneAmount: { fontSize: 12, fontWeight: '700', color: C.text, width: 80, textAlign: 'right' },
   tipCard: {
-    backgroundColor: 'rgba(251,191,36,0.08)', borderRadius: 14, padding: 16, flexDirection: 'row',
-    alignItems: 'flex-start', borderWidth: 1, borderColor: 'rgba(251,191,36,0.15)',
+    backgroundColor: isDark ? 'rgba(251,191,36,0.08)' : 'rgba(251,191,36,0.06)', borderRadius: 14, padding: 16, flexDirection: 'row',
+    alignItems: 'flex-start', borderWidth: 1, borderColor: isDark ? 'rgba(251,191,36,0.15)' : 'rgba(251,191,36,0.12)',
   },
   tipEmoji: { fontSize: 20, marginRight: 10, marginTop: 2 },
-  tipText: { flex: 1, fontSize: 13, color: '#FBBF24', lineHeight: 19 },
-});
+  tipText: { flex: 1, fontSize: 13, color: isDark ? '#FBBF24' : '#92400E', lineHeight: 19 },
+  });
+}
 

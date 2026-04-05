@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
+import { useTheme } from '../context/ThemeContext';
 
 interface Lesson {
   id: string;
@@ -67,6 +68,8 @@ const LESSONS: Lesson[] = [
 ];
 
 export default function LearnScreen({ navigation }: any) {
+  const { C, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(C, isDark), [C, isDark]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('All');
 
@@ -76,9 +79,9 @@ export default function LearnScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
-      <LinearGradient colors={['#0B0B0F', '#111118']} style={styles.header}>
+      <LinearGradient colors={isDark ? ['#0B0B0F', '#111118'] : ['#F8F9FC', '#FFFFFF']} style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
@@ -153,48 +156,33 @@ export default function LearnScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0B0B0F' },
-  header: {
-    paddingTop: Platform.OS === 'ios' ? 56 : 44,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    backgroundColor: '#0B0B0F',
-  },
-  backBtn: { marginBottom: 8 },
-  backText: { color: '#6B7280', fontSize: 14, fontWeight: '600' },
-  headerTitle: { fontSize: 24, fontWeight: '800', color: '#F0F0F5', letterSpacing: -0.5 },
-  headerSub: { fontSize: 14, color: '#6B7280', marginTop: 4 },
-  filterRow: {
-    flexDirection: 'row', paddingHorizontal: 18, paddingVertical: 12, gap: 8,
-  },
-  filterChip: {
-    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
-    backgroundColor: '#111118', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
-  },
-  filterActive: { backgroundColor: '#6C63FF', borderColor: '#6C63FF' },
-  filterText: { fontSize: 12, fontWeight: '600', color: '#6B7280' },
-  filterTextActive: { color: '#FFF' },
-  content: { padding: 18 },
-  lessonCard: {
-    backgroundColor: '#111118', borderRadius: 16, padding: 16, marginBottom: 12,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
-  },
-  lessonHeader: { flexDirection: 'row', alignItems: 'center' },
-  lessonEmoji: {
-    width: 44, height: 44, borderRadius: 12, backgroundColor: '#1E1E28',
-    justifyContent: 'center', alignItems: 'center', marginRight: 12,
-  },
-  lessonEmojiText: { fontSize: 22 },
-  lessonInfo: { flex: 1 },
-  lessonTitle: { fontSize: 15, fontWeight: '700', color: '#F0F0F5' },
-  lessonSub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
-  lessonMeta: { alignItems: 'flex-end' },
-  lessonTime: { fontSize: 11, color: '#6B7280', marginBottom: 4 },
-  diffBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
-  diffText: { fontSize: 10, fontWeight: '700' },
-  lessonContent: { marginTop: 10 },
-  divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.04)', marginBottom: 12 },
-  contentText: { fontSize: 14, color: '#9CA3AF', lineHeight: 22 },
-});
-
+function createStyles(C: any, isDark: boolean) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: C.bg },
+    header: { paddingTop: Platform.OS === 'ios' ? 56 : 44, paddingBottom: 20, paddingHorizontal: 20, backgroundColor: C.bg },
+    backBtn: { marginBottom: 8 },
+    backText: { color: C.textMuted, fontSize: 14, fontWeight: '600' },
+    headerTitle: { fontSize: 24, fontWeight: '800', color: C.text, letterSpacing: -0.5 },
+    headerSub: { fontSize: 14, color: C.textMuted, marginTop: 4 },
+    filterRow: { flexDirection: 'row', paddingHorizontal: 18, paddingVertical: 12, gap: 8 },
+    filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border },
+    filterActive: { backgroundColor: C.primary, borderColor: C.primary },
+    filterText: { fontSize: 12, fontWeight: '600', color: C.textMuted },
+    filterTextActive: { color: '#FFF' },
+    content: { padding: 18 },
+    lessonCard: { backgroundColor: C.surface, borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: C.border },
+    lessonHeader: { flexDirection: 'row', alignItems: 'center' },
+    lessonEmoji: { width: 44, height: 44, borderRadius: 12, backgroundColor: C.input, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+    lessonEmojiText: { fontSize: 22 },
+    lessonInfo: { flex: 1 },
+    lessonTitle: { fontSize: 15, fontWeight: '700', color: C.text },
+    lessonSub: { fontSize: 12, color: C.textMuted, marginTop: 2 },
+    lessonMeta: { alignItems: 'flex-end' },
+    lessonTime: { fontSize: 11, color: C.textMuted, marginBottom: 4 },
+    diffBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
+    diffText: { fontSize: 10, fontWeight: '700' },
+    lessonContent: { marginTop: 10 },
+    divider: { height: 1, backgroundColor: C.border, marginBottom: 12 },
+    contentText: { fontSize: 14, color: C.textSec, lineHeight: 22 },
+  });
+}

@@ -1,14 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MoneyBucket } from '../types';
 import { formatCurrency, formatFullCurrency, getProgressPercent } from '../utils/helpers';
-
-const C = {
-  surface: '#111118', elevated: '#18181F', input: '#1E1E28',
-  text: '#F0F0F5', textSec: '#9CA3AF', textMuted: '#6B7280',
-  border: 'rgba(255,255,255,0.06)', success: '#34D399',
-};
+import { useTheme } from '../context/ThemeContext';
 
 interface Props {
   bucket: MoneyBucket;
@@ -18,6 +13,9 @@ interface Props {
 }
 
 export default function MoneyBucketCard({ bucket, investableAmount, onPress, onInvest }: Props) {
+  const { C } = useTheme();
+  const s = useMemo(() => createStyles(C), [C]);
+
   const monthly = Math.round(investableAmount * bucket.percentage / 100);
   const progress = getProgressPercent(bucket.currentAmount, bucket.targetAmount);
 
@@ -72,24 +70,26 @@ export default function MoneyBucketCard({ bucket, investableAmount, onPress, onI
   );
 }
 
-const s = StyleSheet.create({
-  container: { backgroundColor: C.surface, borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: C.border },
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  dot: { width: 10, height: 10, borderRadius: 5, marginRight: 10 },
-  name: { fontSize: 14, fontWeight: '700', color: C.text },
-  desc: { fontSize: 10, color: C.textMuted, marginTop: 1 },
-  badge: { backgroundColor: C.input, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1, borderColor: C.border },
-  badgeText: { fontSize: 11, fontWeight: '700', color: C.textSec },
-  statsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
-  statLabel: { fontSize: 9, color: C.textMuted, letterSpacing: 0.5 },
-  statValue: { fontSize: 18, fontWeight: '800', marginTop: 1 },
-  statValueSm: { fontSize: 13, fontWeight: '700', color: C.textSec, marginTop: 1 },
-  progressBg: { height: 4, backgroundColor: C.input, borderRadius: 2, overflow: 'hidden' },
-  progressFill: { height: '100%', borderRadius: 2 },
-  progressRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
-  progressText: { fontSize: 10, color: C.textMuted },
-  progressPct: { fontSize: 10, fontWeight: '700', color: C.textSec },
-  investBtn: { marginTop: 10, backgroundColor: C.input, borderRadius: 10, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: C.border, borderStyle: 'dashed' },
-  investBtnText: { fontSize: 12, fontWeight: '600', color: C.textSec },
-});
+function createStyles(C: any) {
+  return StyleSheet.create({
+    container: { backgroundColor: C.surface, borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: C.border },
+    header: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+    dot: { width: 10, height: 10, borderRadius: 5, marginRight: 10 },
+    name: { fontSize: 14, fontWeight: '700', color: C.text },
+    desc: { fontSize: 10, color: C.textMuted, marginTop: 1 },
+    badge: { backgroundColor: C.input, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1, borderColor: C.border },
+    badgeText: { fontSize: 11, fontWeight: '700', color: C.textSec },
+    statsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
+    statLabel: { fontSize: 9, color: C.textMuted, letterSpacing: 0.5 },
+    statValue: { fontSize: 18, fontWeight: '800', marginTop: 1 },
+    statValueSm: { fontSize: 13, fontWeight: '700', color: C.textSec, marginTop: 1 },
+    progressBg: { height: 4, backgroundColor: C.input, borderRadius: 2, overflow: 'hidden' },
+    progressFill: { height: '100%', borderRadius: 2 },
+    progressRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
+    progressText: { fontSize: 10, color: C.textMuted },
+    progressPct: { fontSize: 10, fontWeight: '700', color: C.textSec },
+    investBtn: { marginTop: 10, backgroundColor: C.input, borderRadius: 10, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: C.border, borderStyle: 'dashed' },
+    investBtnText: { fontSize: 12, fontWeight: '600', color: C.textSec },
+  });
+}
 
