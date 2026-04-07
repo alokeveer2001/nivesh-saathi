@@ -84,7 +84,6 @@ export default function GoalsScreen() {
       (new Date(editGoal.targetDate).getTime() - Date.now()) / (30 * 24 * 60 * 60 * 1000)
     ));
     updateGoal(editGoal.id, {
-      name: editName || editGoal.name,
       targetAmount: newTarget,
       monthlySIP: Math.round((newTarget - editGoal.currentAmount) / remaining),
     });
@@ -294,13 +293,9 @@ export default function GoalsScreen() {
 
                 <View style={styles.formField}>
                   <Text style={styles.fieldLabel}>Goal Name</Text>
-                  <TextInput
-                    style={styles.fieldInput}
-                    placeholder={editGoal.name}
-                    placeholderTextColor={C.textMuted}
-                    value={editName}
-                    onChangeText={setEditName}
-                  />
+                  <View style={[styles.fieldInput, { justifyContent: 'center', opacity: 0.6 }]}>
+                    <Text style={{ color: C.text, fontSize: 16 }}>{editGoal.name}</Text>
+                  </View>
                 </View>
 
                 <View style={styles.formField}>
