@@ -361,9 +361,23 @@ export default function HomeScreen({ navigation }: any) {
               <View style={s.handle} />
               <ScrollView showsVerticalScrollIndicator={false} bounces={false} keyboardShouldPersistTaps="handled">
                 <Text style={s.modalTitle}>{editingInvestmentId ? 'Edit Investment' : 'Record Investment'}</Text>
-                <Text style={s.modalSub}>
-                  {investBucket === 'safe' ? '🟢 Safe' : investBucket === 'growth' ? '🟡 Growth' : '🔴 Opportunity'} Pocket
-                </Text>
+
+                <Text style={s.fieldLabel}>POCKET</Text>
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+                  {([
+                    { key: 'safe' as const, label: '🟢 Safe', color: '#10B981' },
+                    { key: 'growth' as const, label: '🟡 Growth', color: '#F59E0B' },
+                    { key: 'opportunity' as const, label: '🔴 Opportunity', color: '#EF4444' },
+                  ]).map(p => (
+                    <TouchableOpacity
+                      key={p.key}
+                      style={[s.chip, { flex: 1, alignItems: 'center' }, investBucket === p.key && { backgroundColor: p.color + '22', borderColor: p.color }]}
+                      onPress={() => setInvestBucket(p.key)}
+                    >
+                      <Text style={[s.chipTxt, investBucket === p.key && { color: p.color, fontWeight: '700' }]}>{p.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
 
                 <Text style={s.fieldLabel}>AMOUNT (₹)</Text>
                 <TextInput style={s.input} placeholder="5000" placeholderTextColor="#555" value={investAmount} onChangeText={setInvestAmount} keyboardType="numeric" autoFocus />
